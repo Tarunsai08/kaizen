@@ -30,7 +30,7 @@ export function useSubject(sid) {
 const plural = (w, n) => (n === 1 ? w : w.endsWith('y') ? w.slice(0, -1) + 'ies' : w + 's');
 const leavesOf = (n) => { const out = []; const go = (x) => (isLeaf(x) ? out.push(x) : x.children.forEach(go)); go(n); return out; };
 
-export function Roadmap({ sid, id }) {
+function RoadmapRoute({ sid, id }) {
   const { push, toast, celebrate } = useApp();
   const { subject, prog, done, loading } = useSubject(sid);
   const wrap = useRef();
@@ -248,6 +248,233 @@ export function Roadmap({ sid, id }) {
         <div className="rt-dock">
           <div className="ico"><Trophy size={18} /></div>
           <div className="grow"><div className="k">All complete</div><div className="t">Finished lessons come back in Revise</div></div>
+        </div>
+      )}
+
+      <Sheet open={menu} onClose={() => setMenu(false)} title={id ? node.title : subject.title}>
+        <div className="list">
+          {own.done < own.total && <button className="menu-row" onClick={() => { setMenu(false); setConfirmAll(true); }}><Check size={18} /><div className="grow"><div className="t">I already know all of this</div><div className="s">Mark every lesson here as done</div></div></button>}
+          {own.done > 0 && <button className="menu-row" onClick={() => { setMenu(false); setConfirmAll(false); }}><Undo2 size={18} /><div className="grow"><div className="t">Reset progress here</div><div className="s">Mark these {own.done} lessons as not done</div></div></button>}
+          <button className="menu-row" onClick={() => { setMenu(false); setAdding(true); }}><Plus size={18} /><div className="grow"><div className="t">Add a {levelName.toLowerCase()}</div><div className="s">Your own item at the end of this roadmap</div></div></button>
+          {id && <button className="menu-row" onClick={() => { setMenu(false); setResOpen(true); }}><Link2 size={18} /><div className="grow"><div className="t">Resources for this {subject.levels?.[depth - 1]?.toLowerCase() || 'topic'}</div><div className="s">{(node.resources || []).length} links · add your own</div></div></button>}
+          {!id && <button className="menu-row" onClick={() => { setMenu(false); push('SubjectSettings', { sid }); }}><Pencil size={18} /><div className="grow"><div className="t">Subject settings</div><div className="s">Daily goal, reminder, colour, export</div></div></button>}
+        </div>
+      </Sheet>
+      <Confirm open={confirmAll !== null} onClose={() => setConfirmAll(null)} title={confirmAll ? 'Mark everything here done?' : 'Reset progress here?'}
+        body={confirmAll ? `All ${own.total - own.done} remaining lessons in “${node.title}” will be marked complete. They won’t be added to your revision deck.` : `The ${own.done} completed lessons in “${node.title}” will go back to not done.`}
+        confirmLabel={confirmAll ? 'Mark done' : 'Reset'}
+        onConfirm={async () => { const c = await markAll(sid, node, !!confirmAll); toast(confirmAll ? `${c} lessons marked done` : 'Progress reset'); }} />
+      <ResourcesSheet open={resOpen} onClose={() => setResOpen(false)} subject={subject} node={node} />
+      <QuickSheet k={quick} onClose={() => setQuick(null)} sid={sid} subject={subject} done={done} open={open} />
+      <AddChildSheet open={adding} onClose={() => setAdding(false)} subject={subject} parentId={id} what={levelName} />
+      <Sheet open={mastered} onClose={() => setMastered(false)}>
+        <div className="col" style={{ alignItems: 'center', textAlign: 'center', gap: 8, padding: '6px 0' }}>
+          <div className="rm-mastered" style={{ '--c': color }}><Trophy size={46} /></div>
+          <div className="eyebrow" style={{ color }}>{levelName === 'Lesson' ? 'Topic' : subject.levels?.[depth - 1] || 'Topic'} complete</div>
+          <h2 className="h1" style={{ fontSize: 26 }}>{node.title}</h2>
+          <p className="dim" style={{ margin: 0 }}>All {own.total} lessons done. They’ll come back as quick flashcards so they stick.</p>
+          <button className="btn primary block mt-16" onClick={() => setMastered(false)}>Onwards</button>
+        </div>
+      </Sheet>
+    </div>
+  );
+}
+
+const OFFS = [0, 0.55, 0.9, 0.55, 0, -0.55, -0.9, -0.55];
+const GAP = 116;
+const TOP = 64;
+
+/* Two roadmap styles, chosen in Settings → Study roadmap style */
+export function Roadmap(props) {
+  const { settings } = useApp();
+  return settings.roadmapStyle === 'path' ? <RoadmapPath {...props} /> : <RoadmapRoute {...props} />;
+}
+
+/* =================================================================== Roadmap */
+function RoadmapPath({ sid, id }) {
+  const { push, toast, celebrate } = useApp();
+  const { subject, done, loading } = useSubject(sid);
+  const wrap = useRef();
+  const [W, setW] = useState(360);
+  const [menu, setMenu] = useState(false);
+  const [resOpen, setResOpen] = useState(false);
+  const [quick, setQuick] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [anim, setAnim] = useState(null); // { idx, phase }
+  const [mastered, setMastered] = useState(false);
+  const [confirmAll, setConfirmAll] = useState(null);
+  const prevTallies = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const m = () => el.clientWidth && setW(el.clientWidth);
+    m();
+    const ro = new ResizeObserver(m);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loading]);
+
+  const hit = subject && id ? findNode(subject, id) : null;
+  const node = subject ? (id ? hit?.node : { id: '__root', title: subject.title, children: subject.children, resources: [] }) : null;
+  const path = hit?.path || [];
+  const depth = id ? path.length + 1 : 0;
+  const kids = node?.children || [];
+  const cache = useMemo(() => new Map(), [done, subject]);
+  const tallies = kids.map((k) => tally(k, done, cache));
+  const own = tallies.reduce((a, t) => ({ done: a.done + t.done, total: a.total + t.total }), { done: 0, total: 0 });
+  const current = tallies.findIndex((t) => t.done < t.total);
+  const color = subject?.color || 'var(--accent)';
+  const levelName = (kids.length && kids.every(isLeaf) ? subject?.levels?.[subject.levels.length - 1] : subject?.levels?.[depth]) || (kids.some((k) => !isLeaf(k)) ? 'Topic' : 'Lesson');
+
+  // detect newly completed children → queue the celebration animation for when this screen is visible
+  const sigNow = tallies.map((t) => `${t.done}/${t.total}`).join(',');
+  const pending = useRef(null);
+  useEffect(() => {
+    if (!node) return;
+    const prev = prevTallies.current;
+    prevTallies.current = tallies;
+    if (!prev || prev.length !== tallies.length) return;
+    const idx = tallies.findIndex((t, i) => t.done === t.total && prev[i].done < prev[i].total);
+    if (idx >= 0) pending.current = { idx, whole: own.done === own.total && own.total > 0, fresh: Date.now() - lastCompleted.ts < 60000 };
+  }, [sigNow]);
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const p = pending.current;
+      if (!p || !wrap.current || wrap.current.offsetParent === null) return;
+      pending.current = null;
+      runCelebration(p);
+    }, 160);
+    return () => clearInterval(iv);
+  }, []);
+  const runCelebration = (p) => {
+    const y = TOP + p.idx * GAP;
+    const sc = wrap.current.closest('.screen') || document.scrollingElement;
+    const rect = wrap.current.getBoundingClientRect();
+    window.scrollTo({ top: window.scrollY + rect.top + y - window.innerHeight * 0.38, behavior: 'smooth' });
+    setAnim({ idx: p.idx, phase: 0 });
+    setTimeout(() => { setAnim({ idx: p.idx, phase: 1 }); success(); sfxComplete(); }, 380);
+    setTimeout(() => { setAnim({ idx: p.idx, phase: 2 }); sfxTravel(800); }, 1000);
+    setTimeout(() => {
+      setAnim({ idx: p.idx, phase: 3 });
+      sfxArrive();
+      if (p.whole) { setMastered(true); celebrate(); sfxFanfare(); }
+    }, 1850);
+    setTimeout(() => setAnim(null), 3400);
+    void sc;
+  };
+
+  // first open: bring the current node into view
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (loading || scrolled.current || !wrap.current || current < 3) return;
+    scrolled.current = true;
+    const rect = wrap.current.getBoundingClientRect();
+    window.scrollTo({ top: window.scrollY + rect.top + TOP + current * GAP - window.innerHeight * 0.4 });
+  }, [loading, current]);
+
+  if (loading) return <div className="screen no-nav" />;
+  if (!node) return <div className="screen no-nav"><TopBar title="Not found" /><p className="dim">This part of the roadmap no longer exists.</p></div>;
+
+  const pos = (i) => ({ x: W / 2 + OFFS[i % OFFS.length] * Math.max(0, W / 2 - 64), y: TOP + i * GAP });
+  const n = kids.length;
+  const height = TOP + n * GAP + 90;
+  const segD = (i) => {
+    const a = pos(i), b = i + 1 < n ? pos(i + 1) : { x: W / 2, y: TOP + n * GAP + 6 };
+    return `M ${a.x} ${a.y} C ${a.x} ${a.y + GAP * 0.5} ${b.x} ${b.y - GAP * 0.5} ${b.x} ${b.y}`;
+  };
+  const open = (k) => (isLeaf(k) ? push('Lesson', { sid, id: k.id }) : push('Roadmap', { sid, id: k.id }));
+  const pct = own.total ? own.done / own.total : 0;
+  const crumbs = [subject.title, ...path.map((p) => p.title)];
+
+  let press;
+  const startPress = (k) => { press = setTimeout(() => { tap('medium'); setQuick(k); press = 'fired'; }, 480); };
+  const endPress = (k, e) => { if (press === 'fired') { e.preventDefault(); press = null; return; } clearTimeout(press); press = null; open(k); };
+
+  return (
+    <div className="screen no-nav page-enter">
+      <TopBar title={id ? node.title : subject.title} right={<button className="icon-btn" onClick={() => setMenu(true)} aria-label="More"><MoreHorizontal size={20} /></button>} />
+      <div className="rm-hero" style={{ '--c': color }}>
+        <div className="eyebrow ellipsis" style={{ color }}>{id ? crumbs.join('  ›  ') : `${n} ${(subject.levels?.[0] || 'topic').toLowerCase()}s · roadmap`}</div>
+        <div className="h2 mt-4" style={{ lineHeight: 1.2 }}>{id ? node.title : subject.long || subject.title}</div>
+        {!id && subject.description && <p className="small dim clamp3" style={{ margin: '6px 0 0' }}>{subject.description}</p>}
+        {node.summary && <p className="small dim" style={{ margin: '6px 0 0' }}>{node.summary}</p>}
+        <div className="rm-stats">
+          <Ring size={58} stroke={6} value={pct} color={color}><span className="num" style={{ fontWeight: 780, fontSize: 14 }}>{Math.round(pct * 100)}%</span></Ring>
+          <div className="grow">
+            <div className="rm-stat-row"><b className="num">{own.done}</b><span>/ {own.total} {own.total === 1 ? 'lesson' : 'lessons'} done</span></div>
+            {!kids.every(isLeaf) && <div className="rm-stat-row"><b className="num">{tallies.filter((t) => t.done === t.total).length}</b><span>/ {n} {levelName.toLowerCase()}{n === 1 ? '' : 's'} complete</span></div>}
+          </div>
+          {(node.resources || []).length > 0 && <button className="btn sm" onClick={() => setResOpen(true)}><Link2 size={15} /> {node.resources.length}</button>}
+        </div>
+      </div>
+
+      {n === 0 ? (
+        <div className="empty mt-24">
+          <div className="small muted">Nothing here yet.</div>
+          <button className="btn sm mt-12" onClick={() => setAdding(true)}><Plus size={15} /> Add a {levelName.toLowerCase()}</button>
+        </div>
+      ) : (
+        <div className="rm" ref={wrap} style={{ height, '--c': color }}>
+          <svg width={W} height={height} className="rm-svg">
+            <defs><linearGradient id="rmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} /><stop offset="1" stopColor={color} stopOpacity=".65" /></linearGradient></defs>
+            {kids.map((k, i) => <path key={'t' + k.id} d={segD(i)} className="rm-track" />)}
+            {kids.map((k, i) => <path key={'c' + k.id} d={segD(i)} className="rm-center" />)}
+            {kids.map((k, i) => {
+              const on = tallies[i].done === tallies[i].total;
+              const drawing = anim && anim.idx === i && anim.phase < 2;
+              const animNow = anim && anim.idx === i && anim.phase >= 2;
+              if (!on || drawing) return null;
+              return <path key={'s' + k.id + (animNow ? 'a' : '')} d={segD(i)} pathLength="1" className={`rm-trail ${animNow ? 'draw' : ''}`} stroke="url(#rmg)" />;
+            })}
+          </svg>
+          {kids.map((k, i) => {
+            const p = pos(i);
+            const t = tallies[i];
+            const full = t.done === t.total;
+            const partial = t.done > 0 && !full;
+            const isCur = i === current && !(anim && anim.phase < 3);
+            const pop = anim && anim.idx === i && anim.phase >= 1 && anim.phase < 3;
+            const arriving = anim && anim.phase === 3 && i === current;
+            const leaf = isLeaf(k);
+            const left = p.x > W / 2 + 4 || (Math.abs(p.x - W / 2) < 5 && OFFS[(i + 1) % OFFS.length] > 0);
+            const labelW = left ? p.x - 46 - 6 : W - p.x - 46 - 6;
+            const shownFull = full && !(anim && anim.idx === i && anim.phase === 0);
+            return (
+              <React.Fragment key={k.id}>
+                {isCur && <span className="rm-halo" style={{ left: p.x - 60, top: p.y - 60 }} />}
+                <button
+                  className={`rm-node ${shownFull ? 'done' : ''} ${isCur ? 'cur' : ''} ${pop ? 'pop' : ''} ${arriving ? 'arrive' : ''}`}
+                  style={{ left: p.x - 36, top: p.y - 36 }}
+                  onPointerDown={() => startPress(k)} onPointerLeave={() => { if (press !== 'fired') clearTimeout(press); }}
+                  onClick={(e) => endPress(k, e)} onContextMenu={(e) => { e.preventDefault(); clearTimeout(press); setQuick(k); }}
+                  aria-label={k.title}
+                >
+                  <svg className="rm-ring" viewBox="0 0 80 80" width="80" height="80">
+                    <circle cx="40" cy="40" r="37" className="bg" />
+                    {!leaf && t.total > 0 && (t.done > 0 || shownFull) && <circle cx="40" cy="40" r="37" className="fg" stroke={color} strokeDasharray={`${(shownFull ? 1 : t.done / t.total) * 232.5} 232.5`} />}
+                  </svg>
+                  <span className="rm-face">
+                    {shownFull ? <Check size={30} strokeWidth={3.2} /> : isCur && t.done === 0 && leaf ? <Play size={24} fill="currentColor" /> : partial ? <span className="rm-frac">{t.done}<i>/{t.total}</i></span> : leaf ? React.createElement(MEDIUM_ICON[k.resources?.find((r) => r.kind === 'practice')?.medium || k.resources?.[0]?.medium] || BookOpen, { size: 24, strokeWidth: 2.2 }) : <span className="rm-num">{i + 1}</span>}
+                    <i className="rm-shine" />
+                  </span>
+                  {pop && <span className="rm-burst">{Array.from({ length: 10 }, (_, j) => <i key={j} style={{ '--a': `${j * 36}deg`, '--d': `${(j % 3) * 40}ms` }}><Star size={j % 2 ? 12 : 16} fill="currentColor" /></i>)}</span>}
+                  {isCur && !(anim && anim.phase < 3) && <span className="rm-bubble">{t.done === 0 ? (i === 0 && own.done === 0 ? 'START' : 'NEXT') : 'CONTINUE'}</span>}
+                </button>
+                <div className={`rm-label ${left ? 'l' : 'r'} ${full ? 'done' : ''} ${isCur ? 'cur' : ''}`} style={{ top: p.y - 34, maxWidth: Math.max(110, labelW), ...(left ? { right: W - p.x + 48 } : { left: p.x + 48 }) }} onClick={() => open(k)}>
+                  <div className="k">{String(i + 1).padStart(2, '0')}{full ? ' · done' : isCur ? ' · up next' : ''}</div>
+                  <div className="t">{k.title}</div>
+                  {!leaf && <div className="rm-mini"><i style={{ width: `${(t.done / Math.max(1, t.total)) * 100}%` }} /></div>}
+                  <div className="s">
+                    {leaf ? (k.difficulty || (k.resources?.length ? `${k.resources.length} resource${k.resources.length > 1 ? 's' : ''}` : 'Lesson')) : `${t.done}/${t.total} lessons${k.children.some((c) => !isLeaf(c)) ? ` · ${k.children.length} ${(subject.levels?.[depth + 1] || 'topic').toLowerCase()}${k.children.length > 1 ? 's' : ''}` : ''}`}
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
+          <div className={`rm-trophy ${own.done === own.total ? 'won' : ''}`} style={{ left: W / 2 - 30, top: TOP + n * GAP - 24 }}>
+            <Trophy size={26} />
+          </div>
         </div>
       )}
 

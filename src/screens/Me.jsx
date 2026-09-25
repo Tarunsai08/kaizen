@@ -140,6 +140,7 @@ export function Settings() {
         </div>
 
         <div className="eyebrow mt-8">Study & learnings</div>
+        <Field label="Roadmap style"><Seg value={settings.roadmapStyle || 'route'} onChange={(v) => set('roadmapStyle', v)} options={[{ value: 'route', label: 'Route list' }, { value: 'path', label: 'Winding path' }]} /></Field>
         <div className="card flat row between">
           <div><div style={{ fontWeight: 600 }}>Daily study reminders</div><div className="small muted">One per subject — time is set in each subject</div></div>
           <Toggle on={settings.studyReminders !== false} onChange={(v) => set('studyReminders', v)} />
