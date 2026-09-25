@@ -205,6 +205,14 @@ export async function computeDay(date = today(), settings) {
     hSum += Math.min(1, amt / target);
     hN++;
   }
+  // break habits: a day without a relapse counts as a successful habit day
+  const [breaks, dayUrges] = await Promise.all([db.habits.where('type').equals('break').toArray(), db.urges.where('date').equals(date).toArray()]);
+  for (const h of breaks) {
+    if (h.archived || (h.startDate && h.startDate > date)) continue;
+    const relapsed = dayUrges.some((u) => u.habitId === h.id && (u.kind === 'relapse' || u.outcome === 'relapsed'));
+    hSum += relapsed ? 0 : 1;
+    hN++;
+  }
   // workout
   const sched = (settings?.schedule || {})[dow(date)] || [];
   const wDone = workouts.some((w) => w.completed);

@@ -6,7 +6,7 @@ export default function Companion({ stage = 0, mood = 'ok', size = 120, accent =
   const leaf = '#5fd38a';
   const leafDark = '#3fae6c';
   const droop = mood === 'droopy' ? 14 : 0;
-  const stemH = [0, 18, 30, 42, 52, 60, 64][stage];
+  const stemH = [0, 18, 30, 42, 52, 60, 64][Math.min(stage, 6)];
   const topY = 92 - stemH;
   const leaves = [];
   const L = (x, y, r, flip, k, s = 1) => (
@@ -18,6 +18,7 @@ export default function Companion({ stage = 0, mood = 'ok', size = 120, accent =
   if (stage >= 3) { leaves.push(L(60, topY + 30, 12, false, 5, 1.05)); leaves.push(L(60, topY + 30, 12, true, 6, 1.05)); }
   const crown = stage >= 4;
   const blooms = stage >= 6;
+  const fruit = stage >= 7, gold = stage >= 8, starlit = stage >= 9, aura = stage >= 10;
   const eyes =
     mood === 'sleepy' ? (
       <g stroke="#1a1a1e" strokeWidth="2.2" strokeLinecap="round" fill="none"><path d="M49 112 q3 2 6 0" /><path d="M65 112 q3 2 6 0" /></g>
@@ -28,6 +29,7 @@ export default function Companion({ stage = 0, mood = 'ok', size = 120, accent =
   return (
     <svg width={size} height={size * 1.1} viewBox="0 0 120 132" aria-label="Companion">
       <ellipse cx="60" cy="128" rx="30" ry="3.5" fill="#000" opacity=".25" />
+      {aura && <circle cx="60" cy={topY - 4} r={stage >= 11 ? 50 : 42} fill={stage >= 11 ? '#fde68a' : '#86efac'} opacity=".16" />}
       <g className="sway">
         {stage === 0 ? (
           <g><ellipse cx="60" cy="87" rx="7" ry="5" fill="#a47148" /><path d="M60 82 q2 -6 7 -7" stroke="#5fd38a" strokeWidth="2.4" fill="none" strokeLinecap="round" /></g>
@@ -40,7 +42,7 @@ export default function Companion({ stage = 0, mood = 'ok', size = 120, accent =
             <circle cx="60" cy={topY - 6} r={stage >= 5 ? 22 : 16} fill={leaf} />
             <circle cx={stage >= 5 ? 44 : 49} cy={topY + 4} r={stage >= 5 ? 14 : 10} fill={leafDark} />
             <circle cx={stage >= 5 ? 76 : 71} cy={topY + 4} r={stage >= 5 ? 14 : 10} fill={leafDark} />
-            <circle cx="60" cy={topY - 14} r={stage >= 5 ? 12 : 8} fill="#7be3a2" />
+            <circle cx="60" cy={topY - 14} r={stage >= 5 ? 12 : 8} fill={gold ? '#fcd34d' : '#7be3a2'} />
           </g>
         )}
         {blooms && [[46, topY - 14], [74, topY - 10], [60, topY - 26], [52, topY + 2], [70, topY + 6]].map(([x, y], i) => (
@@ -49,6 +51,8 @@ export default function Companion({ stage = 0, mood = 'ok', size = 120, accent =
             <circle r="1.8" fill="#facc15" />
           </g>
         ))}
+        {fruit && [[40, topY + 10], [80, topY + 12], [66, topY - 20], [50, topY - 4]].map(([x, y], i) => <circle key={'f' + i} cx={x} cy={y} r="3.4" fill={gold ? '#f59e0b' : '#f87171'} />)}
+        {starlit && [[20, 40], [100, 30], [16, 78], [104, 70], [60, 10]].slice(0, stage >= 11 ? 5 : 3).map(([x, y], i) => <path key={'s' + i} d={`M${x} ${y - 4} l1.2 2.8 2.8 1.2 -2.8 1.2 -1.2 2.8 -1.2 -2.8 -2.8 -1.2 2.8 -1.2z`} fill="#fde68a" />)}
         {mood === 'happy' && stage > 0 && (
           <g fill={accent} opacity=".9">
             <path d="M24 60 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" />

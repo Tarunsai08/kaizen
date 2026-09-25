@@ -144,7 +144,7 @@ export function Settings() {
 
         <div className="eyebrow mt-8">Privacy</div>
         <div className="card flat row between">
-          <div className="row gap-10"><Lock size={18} /><div><div style={{ fontWeight: 600 }}>Journal lock</div><div className="small muted">{settings.journalLock ? 'PIN required for journal' : 'Off'}</div></div></div>
+          <div className="row gap-10"><Lock size={18} /><div><div style={{ fontWeight: 600 }}>PIN lock</div><div className="small muted">{settings.journalLock ? 'Journal & bad habits need a PIN' : 'Off'}</div></div></div>
           <Toggle on={!!settings.journalLock} onChange={(v) => { if (v) { setPin(''); setPinSheet(true); } else set('journalLock', ''); }} />
         </div>
 
