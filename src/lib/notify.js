@@ -60,7 +60,7 @@ async function buildAll() {
   // Habit reminders
   const habits = await db.habits.toArray();
   for (const h of habits) {
-    if (!h.reminder || h.archived || !habitActiveOn(h, today()) && h.startDate > today()) continue;
+    if (h.type === 'break' || !h.reminder || h.archived || !habitActiveOn(h, today()) && h.startDate > today()) continue;
     const days = h.freq === 'weekly' || !h.days || !h.days.length || h.days.length === 7 ? null : h.days;
     const times = [];
     if (h.intervalMins && h.windowStart && h.windowEnd) {

@@ -12,38 +12,44 @@ import { TagList, syncSms } from './Money';
 import { success, tap } from '../lib/native';
 
 /* ---------- Journal lock ---------- */
-let unlocked = false;
-export function LockGate({ children }) {
+// Asks for the PIN every time it is shown (no remembered unlock).
+export function LockGate({ children, title = 'Journal is locked', inline = false, onCancel, create = false }) {
   const { settings, pop } = useApp();
   const [pin, setPin] = useState('');
-  const [ok, setOk] = useState(unlocked || !settings.journalLock);
+  const [first, setFirst] = useState(null);
+  const needCreate = create && !settings.journalLock;
+  const [ok, setOk] = useState(!settings.journalLock && !needCreate);
   const [shake, setShake] = useState(false);
   if (ok) return children;
+  const bad = () => { setShake(true); setTimeout(() => { setShake(false); setPin(''); }, 400); };
   const press = (d) => {
     tap();
     const p = (pin + d).slice(0, 4);
     setPin(p);
-    if (p.length === 4) {
-      if (p === settings.journalLock) { unlocked = true; setOk(true); }
-      else { setShake(true); setTimeout(() => { setShake(false); setPin(''); }, 400); }
-    }
+    if (p.length < 4) return;
+    if (needCreate) {
+      if (!first) { setFirst(p); setTimeout(() => setPin(''), 150); }
+      else if (p === first) { setKV('journalLock', p); success(); setOk(true); }
+      else { setFirst(null); bad(); }
+    } else if (p === settings.journalLock) setOk(true);
+    else bad();
   };
-  return (
-    <div className="screen no-nav">
-      <TopBar title="" />
-      <div className="lock-screen">
+  const pad = (
+    <div className="lock-screen" style={inline ? { minHeight: 440, paddingTop: 20 } : null}>
         <Lock size={28} className="muted" />
-        <div className="h2">Journal is locked</div>
+        <div className="h2">{needCreate ? (first ? 'Repeat your PIN' : 'Create a 4-digit PIN') : title}</div>
+        {needCreate && <div className="small muted center" style={{ maxWidth: 260 }}>Used for your journal and bad habits.</div>}
         <div className="pin-dots" style={shake ? { animation: 'pop .4s' } : null}>{[0, 1, 2, 3].map((i) => <i key={i} className={pin.length > i ? 'on' : ''} />)}</div>
         <div className="keypad">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => <button key={n} onClick={() => press(String(n))}>{n}</button>)}
-          <button onClick={pop} style={{ fontSize: 14 }}>Cancel</button>
+          <button onClick={onCancel || pop} style={{ fontSize: 14 }}>Cancel</button>
           <button onClick={() => press('0')}>0</button>
           <button onClick={() => setPin(pin.slice(0, -1))} style={{ fontSize: 14 }}>⌫</button>
         </div>
-      </div>
     </div>
   );
+  if (inline) return pad;
+  return <div className="screen no-nav"><TopBar title="" />{pad}</div>;
 }
 
 /* ---------- Day summary (shared) ---------- */

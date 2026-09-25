@@ -170,6 +170,7 @@ export function CompanionScreen() {
       </div>
       <div className="card mt-12">
         <div className="h3 mb-12">Growth path</div>
+        <div className="tiny muted mb-8">Kai never stops growing — after level 100 it earns a ✦ every 25 levels.</div>
         <div className="row" style={{ justifyContent: 'space-between', overflowX: 'auto', gap: 4 }}>
           {STAGES.map((s, i) => (
             <div key={s.name} className="col" style={{ alignItems: 'center', gap: 2, opacity: i <= st.index ? 1 : 0.35, minWidth: 44 }}>

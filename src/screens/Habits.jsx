@@ -10,6 +10,7 @@ import { Heatmap, Bars, HBars, WeekHourGrid, HourHist, Line } from '../ui/charts
 import { HabitRow, BreakRow, SectionHead } from '../ui/rows';
 import { success, tap } from '../lib/native';
 import { HIcon, IconPicker } from '../ui/icons';
+import { LockGate } from './Journal';
 import { SubTabs, useSub } from '../ui/kit';
 import { ScreenTimeView } from './ScreenTime';
 import { AREAS } from '../lib/xp';
@@ -40,6 +41,7 @@ function HabitsHeader() {
 function HabitsList() {
   const { push } = useApp();
   const [cat, setCat] = useState('all');
+  const [kind, setKind] = useState('build');
   const t = today();
   const data = useLiveQuery(async () => {
     const [habits, logs, urges, cats] = await Promise.all([
@@ -52,7 +54,7 @@ function HabitsList() {
   }, [t]);
   if (!data) return null;
   const { habits, logs, urges, cats } = data;
-  const shown = habits.filter((h) => cat === 'all' || h.categoryId === cat);
+  const shown = habits.filter((h) => cat === 'all' || h.categoryId === cat || kind === 'break');
   const build = shown.filter((h) => h.type === 'build');
   const brk = shown.filter((h) => h.type === 'break');
 
@@ -69,19 +71,33 @@ function HabitsList() {
 
   return (
     <div>
-      <div className="grid-2">
+      <Seg value={kind} onChange={setKind} options={[{ value: 'build', label: 'Build' }, { value: 'break', label: '🔒 Break' }]} />
+      <div className="mt-12" />
+      {kind === 'break' ? (
+        <LockGate inline create title="Bad habits are private" onCancel={() => setKind('build')}>
+          <div className="card">
+            <div className="eyebrow">Break · this week</div>
+            <div className="row gap-10 mt-8">
+              <Ring size={52} stroke={6} value={bs.control ?? 0} color="var(--break)"><span className="tiny num" style={{ fontWeight: 700 }}>{bs.control == null ? '—' : Math.round(bs.control * 100)}</span></Ring>
+              <div className="small muted">control · {bs.relapses} relapse{bs.relapses === 1 ? '' : 's'}<br />A day with no relapse counts as a win.</div>
+            </div>
+          </div>
+          <div className="section">
+            <SectionHead title="Breaking" />
+            {brk.length ? (
+              <div className="col gap-6">{brk.map((h) => <BreakRow key={h.id} h={h} urges={urges.filter((u) => u.habitId === h.id)} />)}</div>
+            ) : (
+              <Empty icon="🔓" title="Nothing to break yet" sub="Track urges & triggers, not failures." action={<button className="btn sm" onClick={() => push('HabitForm', { type: 'break' })}>Add one</button>} />
+            )}
+          </div>
+        </LockGate>
+      ) : (<>
+      <div>
         <div className="card">
           <div className="eyebrow">Build · this week</div>
           <div className="row gap-10 mt-8">
             <Ring size={52} stroke={6} value={bn ? br / bn : 0} color="var(--habit)"><span className="tiny num" style={{ fontWeight: 700 }}>{bn ? Math.round((br / bn) * 100) : 0}</span></Ring>
             <div className="small muted">completion</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="eyebrow">Break · this week</div>
-          <div className="row gap-10 mt-8">
-            <Ring size={52} stroke={6} value={bs.control ?? 0} color="var(--break)"><span className="tiny num" style={{ fontWeight: 700 }}>{bs.control == null ? '—' : Math.round(bs.control * 100)}</span></Ring>
-            <div className="small muted">control<br />{bs.relapses} relapse{bs.relapses === 1 ? '' : 's'}</div>
           </div>
         </div>
       </div>
@@ -110,14 +126,7 @@ function HabitsList() {
         )}
       </div>
 
-      <div className="section">
-        <SectionHead title="Breaking" />
-        {brk.length ? (
-          <div className="col gap-6">{brk.map((h) => <BreakRow key={h.id} h={h} urges={urges.filter((u) => u.habitId === h.id)} />)}</div>
-        ) : (
-          <Empty icon="🔓" title="Nothing to break yet" sub="Track urges & triggers, not failures." action={<button className="btn sm" onClick={() => push('HabitForm', { type: 'break' })}>Add one</button>} />
-        )}
-      </div>
+      </>)}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
   addResource, editResource, deleteResource, addChild, renameNode, deleteNode, setNote, fmtIv,
 } from '../lib/study';
 
-export const MEDIUM_ICON = { video: PlayCircle, article: FileText, book: BookOpen, course: GraduationCap, interactive: MousePointerClick, problem: Swords, paper: ScrollText, code: Code2, exercise: PenLine };
+export const MEDIUM_ICON = { video: PlayCircle, article: FileText, book: BookOpen, course: GraduationCap, interactive: MousePointerClick, problem: Code2, paper: ScrollText, code: Code2, exercise: PenLine };
 const OFFS = [0, 0.55, 0.9, 0.55, 0, -0.55, -0.9, -0.55];
 const GAP = 116;
 const TOP = 64;
@@ -153,13 +153,15 @@ export function Roadmap({ sid, id }) {
       ) : (
         <div className="rm" ref={wrap} style={{ height, '--c': color }}>
           <svg width={W} height={height} className="rm-svg">
+            <defs><linearGradient id="rmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} /><stop offset="1" stopColor={color} stopOpacity=".65" /></linearGradient></defs>
             {kids.map((k, i) => <path key={'t' + k.id} d={segD(i)} className="rm-track" />)}
+            {kids.map((k, i) => <path key={'c' + k.id} d={segD(i)} className="rm-center" />)}
             {kids.map((k, i) => {
               const on = tallies[i].done === tallies[i].total;
               const drawing = anim && anim.idx === i && anim.phase < 2;
               const animNow = anim && anim.idx === i && anim.phase >= 2;
               if (!on || drawing) return null;
-              return <path key={'s' + k.id + (animNow ? 'a' : '')} d={segD(i)} pathLength="1" className={`rm-trail ${animNow ? 'draw' : ''}`} stroke={color} />;
+              return <path key={'s' + k.id + (animNow ? 'a' : '')} d={segD(i)} pathLength="1" className={`rm-trail ${animNow ? 'draw' : ''}`} stroke="url(#rmg)" />;
             })}
           </svg>
           {kids.map((k, i) => {
@@ -188,13 +190,15 @@ export function Roadmap({ sid, id }) {
                     {!leaf && t.total > 0 && (t.done > 0 || shownFull) && <circle cx="40" cy="40" r="37" className="fg" stroke={color} strokeDasharray={`${(shownFull ? 1 : t.done / t.total) * 232.5} 232.5`} />}
                   </svg>
                   <span className="rm-face">
-                    {shownFull ? <Check size={30} strokeWidth={3} /> : isCur && t.done === 0 && leaf ? <Play size={24} fill="currentColor" /> : partial ? <span className="rm-frac">{t.done}<i>/{t.total}</i></span> : <span className="rm-num">{i + 1}</span>}
+                    {shownFull ? <Check size={30} strokeWidth={3.2} /> : isCur && t.done === 0 && leaf ? <Play size={24} fill="currentColor" /> : partial ? <span className="rm-frac">{t.done}<i>/{t.total}</i></span> : leaf ? React.createElement(MEDIUM_ICON[k.resources?.find((r) => r.kind === 'practice')?.medium || k.resources?.[0]?.medium] || BookOpen, { size: 24, strokeWidth: 2.2 }) : <span className="rm-num">{i + 1}</span>}
+                    <i className="rm-shine" />
                   </span>
                   {pop && <span className="rm-burst">{Array.from({ length: 10 }, (_, j) => <i key={j} style={{ '--a': `${j * 36}deg`, '--d': `${(j % 3) * 40}ms` }}><Star size={j % 2 ? 12 : 16} fill="currentColor" /></i>)}</span>}
                   {isCur && !(anim && anim.phase < 3) && <span className="rm-bubble">{t.done === 0 ? (i === 0 && own.done === 0 ? 'START' : 'NEXT') : 'CONTINUE'}</span>}
                 </button>
-                <div className={`rm-label ${left ? 'l' : 'r'} ${full ? 'done' : ''}`} style={{ top: p.y - 30, width: Math.max(96, labelW), ...(left ? { right: W - p.x + 46 } : { left: p.x + 46 }) }} onClick={() => open(k)}>
+                <div className={`rm-label ${left ? 'l' : 'r'} ${full ? 'done' : ''} ${isCur ? 'cur' : ''}`} style={{ top: p.y - 34, maxWidth: Math.max(110, labelW), ...(left ? { right: W - p.x + 48 } : { left: p.x + 48 }) }} onClick={() => open(k)}>
                   <div className="t">{k.title}</div>
+                  {!leaf && <div className="rm-mini"><i style={{ width: `${(t.done / Math.max(1, t.total)) * 100}%` }} /></div>}
                   <div className="s">
                     {leaf ? (k.difficulty || (k.resources?.length ? `${k.resources.length} resource${k.resources.length > 1 ? 's' : ''}` : 'Lesson')) : `${t.done}/${t.total} lessons${k.children.some((c) => !isLeaf(c)) ? ` · ${k.children.length} ${(subject.levels?.[depth + 1] || 'topic').toLowerCase()}${k.children.length > 1 ? 's' : ''}` : ''}`}
                   </div>

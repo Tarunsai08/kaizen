@@ -87,11 +87,22 @@ export const STAGES = [
   { min: 11, name: 'Young tree', line: 'Weathering storms.' },
   { min: 16, name: 'Tree', line: 'Solid, steady, growing.' },
   { min: 22, name: 'Blooming tree', line: 'Look at you.' },
+  { min: 30, name: 'Fruit tree', line: 'Your habits are bearing fruit.' },
+  { min: 40, name: 'Golden tree', line: 'Rare. Consistent. Yours.' },
+  { min: 55, name: 'Starlit tree', line: 'Growing even while you sleep.' },
+  { min: 75, name: 'Ancient tree', line: 'Deep roots, quiet strength.' },
+  { min: 100, name: 'Eternal tree', line: 'Kaizen: it never stops.' },
 ];
+// Past level 100 Kai keeps growing: one extra ✦ every 25 levels, forever.
 export function stageFor(level) {
   let i = 0;
   STAGES.forEach((s, k) => { if (level >= s.min) i = k; });
-  return { index: i, ...STAGES[i], next: STAGES[i + 1] || null };
+  const last = STAGES.length - 1;
+  if (i === last && level >= 125) {
+    const stars = Math.floor((level - 100) / 25);
+    return { index: i, stars, min: 100 + stars * 25, name: `${STAGES[last].name} ${'✦'.repeat(Math.min(stars, 5))}${stars > 5 ? stars : ''}`, line: STAGES[last].line, next: { min: 100 + (stars + 1) * 25, name: `${STAGES[last].name} ✦${stars + 1}` } };
+  }
+  return { index: i, stars: 0, ...STAGES[i], next: STAGES[i + 1] || { min: 125, name: `${STAGES[last].name} ✦` } };
 }
 
 /* ---------- Streak freezes ----------

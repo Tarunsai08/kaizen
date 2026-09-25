@@ -208,12 +208,11 @@ export default function Today() {
       </div>
 
       {/* Habits */}
-      {(build.length > 0 || breaks.length > 0) ? (
+      {build.length > 0 ? (
         <div className="section">
           <SectionHead title="Habits" link="Manage" onLink={() => goTab('habits')} />
           <div className="col gap-6">
             {build.map((h) => <HabitRow key={h.id} h={h} logs={logs.filter((l) => l.habitId === h.id)} />)}
-            {breaks.map((h) => <BreakRow key={h.id} h={h} urges={urges.filter((u) => u.habitId === h.id)} />)}
           </div>
         </div>
       ) : (
