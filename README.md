@@ -47,6 +47,35 @@ Run `npm install && npm run build`, host the `dist/` folder anywhere (for exampl
 
 ---
 
+## Study roadmaps (v3)
+
+The **Study** tab (Today · Plan · Study · Habits · Health; Money now lives on Today and under You) has three parts:
+
+- **Roadmaps**: DSA (all 402 problems of Striver's A2Z sheet, in its order), System Design (ByteByteGo, Hello Interview, System Design Primer, MIT 6.5840, Kleppmann: 11 topics, 75 lessons) and ML & DL (math-first: 17 modules, 127 lessons, each with learn / deep-dive math / implement / practice resources). Nothing is locked. Every level is an animated path with progress rings, and finishing a lesson plays a completion animation.
+- **Revise**: finished lessons become flashcards (spaced repetition 1 → 3 → 7 → 16 → 35 … days). At most one prompt a day, one notification a day, and a daily cap (Settings).
+- **Learnings**: stack takeaways from podcasts, books and videos. *Do* items become experiments (7–30 days, daily check-in, before/after comparison, then keep → habit, tweak or drop). *Remember* items pop up at random times during the day.
+
+### Excel format (import / export)
+
+Export a subject (Study → + → Export), edit it in Excel or Google Sheets, then import it again. The roadmap is updated and your completed lessons stay completed. Any other subject can be added the same way.
+
+| Column | Required | Meaning |
+|---|---|---|
+| ID | no | Filled in by export. Keep it when you re-import so your progress is kept. Leave it empty for new rows. |
+| Subject | yes* | Subject name. A sheet can contain several subjects. *If the column is missing, the sheet name is used. |
+| Topic | yes | Level 1 of the roadmap |
+| Subtopic | no | Level 2. Leave it empty for a 2-level roadmap (Topic → Lesson). |
+| Lesson | no | Level 3. Leave it empty to make the Subtopic itself the lesson. Deeper levels: `A › B`. |
+| Difficulty, Summary, Recall question | no | Read from the first row of each lesson. The recall question is the flashcard. |
+| Resource title, Resource URL | no | One resource per row. A lesson with 3 resources takes 3 rows. |
+| Resource type | no | Learn, Deep dive, Implement, Practice or Apply |
+| Medium | no | video, article, book, course, interactive, problem, paper, code, exercise |
+| Resource note | no | e.g. "watch 12:00–30:00" |
+
+Rows appear on the roadmap in the same order as in the sheet. On re-import: deleted rows are removed, new rows are added, edited text is replaced, and the preview shows exactly what will change before you apply it. `.csv` files work too.
+
+Each build also checks every resource link (`content-src/check_links.py`) and attaches `link-report.md` to the workflow artifacts.
+
 ## Develop
 
 ```bash

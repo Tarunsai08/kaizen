@@ -117,7 +117,7 @@ export function TaskRow({ t, showDate = true, projects = [], goals = [] }) {
     else { tap(); await completeTask(t, false); }
   };
   return (
-    <div className="list-item" onClick={() => push('TaskForm', { id: t.id })} style={{ opacity: anim ? 0.4 : 1, transition: 'opacity .3s' }}>
+    <div className="list-item" onClick={() => (t.study ? push('Lesson', { sid: t.study.sid, id: t.study.id }) : push('TaskForm', { id: t.id }))} style={{ opacity: anim ? 0.4 : 1, transition: 'opacity .3s' }}>
       <button className={`task-check ${t.done || anim ? 'on' : ''}`} onClick={toggle} aria-label="Complete">
         {(t.done || anim) && <Check size={14} strokeWidth={3} />}
       </button>

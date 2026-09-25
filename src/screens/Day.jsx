@@ -9,6 +9,7 @@ import { dayItems } from '../lib/day';
 import { HIcon } from '../ui/icons';
 import { TaskRow } from '../ui/rows';
 import { success, tap } from '../lib/native';
+import { StudySuggestions } from './Study';
 
 const minToHM = (m) => { m = ((m % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 
@@ -34,7 +35,8 @@ export function DayView() {
     else if (it.kind === 'habit') push('HabitDetail', { id: it.ref.id });
   };
   const open = (it) => {
-    if (it.kind === 'task') push('TaskForm', { id: it.ref.id });
+    if (it.kind === 'task' && it.ref.study) push('Lesson', { sid: it.ref.study.sid, id: it.ref.study.id });
+    else if (it.kind === 'task') push('TaskForm', { id: it.ref.id });
     else toggle(it);
   };
 
@@ -56,6 +58,7 @@ export function DayView() {
         <button className="btn grow" onClick={add}><Plus size={18} /> Block</button>
         <button className="btn grow" style={{ background: 'color-mix(in srgb, var(--bored) 16%, var(--surface-2))' }} onClick={() => push('Focus', {})}><Timer size={18} color="var(--bored)" /> Focus{focusMin ? ` · ${fmtDur(focusMin)}` : ''}</button>
       </div>
+      {date >= t && <div className="mb-16"><StudySuggestions date={date} /></div>}
 
       {data && data.inbox.length > 0 && (
         <div className="mb-16">

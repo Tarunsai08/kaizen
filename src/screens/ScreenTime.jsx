@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { Globe, MessageCircle, Plus, Stethoscope, Copy, Trash2 } from 'lucide-react';
 import { Smartphone, ShieldCheck, Shield as ShieldIcon, ChevronRight, Lock, Unlock, Hourglass, X, Clapperboard, TimerReset, Settings2, RefreshCw } from 'lucide-react';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
@@ -182,6 +183,15 @@ export function ShieldSettings() {
   };
   useEffect(() => { load(); const h = () => document.visibilityState === 'visible' && load(); document.addEventListener('visibilitychange', h); return () => document.removeEventListener('visibilitychange', h); }, []);
   const events = useLiveQuery(() => db.shieldEvents.where('date').equals(today()).toArray(), []) || [];
+  const { push } = useApp();
+  const [site, setSite] = useState('');
+  const [cooldown, setCooldown] = useState(null);
+  const guardedOff = (turningOn, run) => { if (turningOn) run(); else setCooldown({ label: 'Turn this off', run }); };
+  const addSite = () => {
+    const d = site.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    if (d && d.includes('.') && !(cfg.blockedSites || []).includes(d)) update({ blockedSites: [...(cfg.blockedSites || []), d] });
+    setSite('');
+  };
   const update = async (patch) => {
     const next = { ...cfg, ...patch };
     await setKV('shield', next);
@@ -239,11 +249,61 @@ export function ShieldSettings() {
             <div key={s.key} className="list-item">
               <Clapperboard size={19} className="muted" />
               <span className="grow" style={{ fontWeight: 580 }}>{s.label}</span>
-              <Toggle on={!!(cfg.shorts || {})[s.key]} onChange={(v) => update({ shorts: { ...(cfg.shorts || {}), [s.key]: v } })} />
+              <Toggle on={!!(cfg.shorts || {})[s.key]} onChange={(v) => guardedOff(v, () => update({ shorts: { ...(cfg.shorts || {}), [s.key]: v } }))} />
             </div>
           ))}
+          <div className="list-item">
+            <Globe size={19} className="muted" />
+            <div className="grow"><div style={{ fontWeight: 580 }}>Also in web browsers</div><div className="tiny muted">youtube.com/shorts, instagram.com/reels… in Chrome, Brave, Edge, Firefox, Samsung</div></div>
+            <Toggle on={cfg.browsers !== false} onChange={(v) => guardedOff(v, () => update({ browsers: v }))} />
+          </div>
+          <div className="list-item">
+            <MessageCircle size={19} className="muted" />
+            <div className="grow"><div style={{ fontWeight: 580 }}>Allow Reels friends send in DMs</div><div className="tiny muted">Opens reels shared in Instagram chats</div></div>
+            <Toggle on={!!cfg.allowDmReels} onChange={(v) => update({ allowDmReels: v })} />
+          </div>
         </div>
-        <div className="tiny muted mt-8">When a Shorts/Reels feed opens, Kaizen takes you back and shows a quick note. The rest of the app still works.</div>
+        <div className="tiny muted mt-8">When a Shorts/Reels feed opens — in the app or a browser — Kaizen takes you back and shows a quick note. Everything else keeps working.</div>
+      </div>
+
+      <div className="section">
+        <SectionHead title="Blocked websites" />
+        <div className="list">
+          {(cfg.blockedSites || []).map((d) => (
+            <div key={d} className="list-item">
+              <Globe size={18} className="muted" />
+              <span className="grow" style={{ fontWeight: 560 }}>{d}</span>
+              <button className="icon-btn sm ghost" onClick={() => guardedOff(false, () => update({ blockedSites: cfg.blockedSites.filter((x) => x !== d) }))}><X size={16} /></button>
+            </div>
+          ))}
+          <div className="list-item">
+            <Plus size={16} className="muted" />
+            <input className="grow" style={{ background: 'none', border: 0 }} placeholder="Add a site, e.g. instagram.com" value={site} onChange={(e) => setSite(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addSite(); }} onBlur={addSite} />
+          </div>
+        </div>
+        <div className="tiny muted mt-8">Useful if your browser only shows the domain in the address bar.</div>
+      </div>
+
+      <div className="section">
+        <SectionHead title="Take a break from Shield" />
+        <div className="card">
+          {cfg.pausedUntil > Date.now() ? (
+            <div className="row between"><span className="small">Paused until {new Date(cfg.pausedUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span><button className="btn sm primary" onClick={() => update({ pausedUntil: 0 })}>Resume now</button></div>
+          ) : (
+            <><div className="small muted mb-12">Pausing asks you to wait 30 seconds first — enough to beat an impulse.</div>
+            <button className="btn block" onClick={() => setCooldown({ label: 'Pause Shield for 15 minutes', run: () => update({ pausedUntil: Date.now() + 15 * 60000 }) })}>Pause for 15 minutes</button></>
+          )}
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHead title="Not blocking correctly?" />
+        <button className="card card-press row gap-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('ShieldDiagnostics')}>
+          <Stethoscope size={20} color="var(--accent)" />
+          <div className="grow"><div style={{ fontWeight: 600 }}>Diagnostics</div><div className="tiny muted">Record what Shield sees and send it to fix detection for your phone</div></div>
+          <ChevronRight size={18} className="muted" />
+        </button>
       </div>
 
       <div className="section">
@@ -264,6 +324,7 @@ export function ShieldSettings() {
         </div>
       </div>
 
+      <CooldownSheet state={cooldown} onClose={() => setCooldown(null)} />
       <Sheet open={picking} onClose={() => setPicking(false)} title="Pause before…">
         <div className="list" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           {apps.map((a) => {
@@ -333,3 +394,69 @@ export function Pause({ pkg, label }) {
   );
 }
 export { fmtClock, Breathe, Settings2, TimerReset, Lock, Unlock };
+
+/* Wait before weakening Shield (beats the impulse) */
+function CooldownSheet({ state, onClose }) {
+  const [left, setLeft] = useState(30);
+  useEffect(() => {
+    if (!state) return;
+    setLeft(30);
+    const id = setInterval(() => setLeft((l) => Math.max(0, l - 1)), 1000);
+    return () => clearInterval(id);
+  }, [state]);
+  if (!state) return null;
+  return (
+    <Sheet open onClose={onClose} title="Are you sure?">
+      <p className="dim" style={{ marginTop: -6 }}>Take a breath. If you still want to after 30 seconds, go ahead.</p>
+      <div className="center big-num num" style={{ margin: '18px 0' }}>{left}s</div>
+      <div className="row">
+        <button className="btn primary grow" onClick={onClose}>Keep Shield on</button>
+        <button className="btn grow" disabled={left > 0} onClick={() => { state.run(); onClose(); }}>{state.label}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+/* Diagnostics: shows what Shield sees (view ids / selected tabs / url only) */
+export function ShieldDiagnostics() {
+  const { settings, toast } = useApp();
+  const cfg = settings.shield || {};
+  const [rows, setRows] = useState([]);
+  const on = !!cfg.diagnostics;
+  const load = async () => { try { const r = await Kaizen.getShieldDiagnostics({}); setRows(JSON.parse(r.data || '[]').reverse()); } catch { setRows([]); } };
+  useEffect(() => { load(); const id = setInterval(load, 3000); return () => clearInterval(id); }, []);
+  const toggle = async (v) => {
+    const next = { ...cfg, diagnostics: v };
+    await setKV('shield', next);
+    await pushShieldConfig({ ...next, limits: settings.screenLimits || {} });
+  };
+  const text = JSON.stringify(rows.slice(0, 25), null, 1);
+  return (
+    <div className="screen no-nav page-enter">
+      <TopBar title="Shield diagnostics" />
+      <div className="card">
+        <div className="row between"><div><div className="h3">Record</div><div className="small muted">Only screen element names, selected tabs and URLs — never content</div></div><Toggle on={on} onChange={toggle} /></div>
+        <ol className="small dim mt-12" style={{ paddingLeft: 18, lineHeight: 1.7, marginBottom: 0 }}>
+          <li>Turn on Record</li>
+          <li>Open YouTube → Shorts, and Instagram → Reels (and the website if it fails there)</li>
+          <li>Come back and tap <b>Copy</b>, then paste it to Claude</li>
+        </ol>
+      </div>
+      <div className="row mt-12">
+        <button className="btn grow" disabled={!rows.length} onClick={async () => { try { await navigator.clipboard.writeText(text); toast('Copied'); } catch { toast('Copy failed'); } }}><Copy size={16} /> Copy</button>
+        <button className="btn grow" onClick={async () => { await Kaizen.getShieldDiagnostics({ clear: true }); setRows([]); }}><Trash2 size={16} /> Clear</button>
+      </div>
+      <div className="list mt-12">
+        {rows.slice(0, 25).map((r, i) => (
+          <div key={i} className="list-item" style={{ display: 'block' }}>
+            <div className="row between small"><b>{r.pkg.split('.').slice(-1)[0]}</b><span className="tiny muted">{new Date(r.ts).toLocaleTimeString()}</span></div>
+            <div className="tiny" style={{ color: r.result ? 'var(--good)' : 'var(--muted)' }}>{r.result ? `Blocked · ${r.result}` : 'Not blocked'}{r.url ? ` · ${r.url}` : ''}</div>
+            {r.big?.length > 0 && <div className="tiny muted ellipsis">Full-screen: {r.big.join(', ')}</div>}
+            {r.selected?.length > 0 && <div className="tiny muted ellipsis">Selected: {r.selected.join(', ')}</div>}
+          </div>
+        ))}
+        {!rows.length && <div className="list-item muted small">Nothing recorded yet</div>}
+      </div>
+    </div>
+  );
+}

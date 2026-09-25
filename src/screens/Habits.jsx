@@ -130,7 +130,7 @@ const BLANK = {
   freq: 'daily', perWeek: 3, days: [0, 1, 2, 3, 4, 5, 6], intervalMins: null, windowStart: '', windowEnd: '',
   reminder: false, reminderTime: '09:00', grace: 0, startDate: '', endDate: '', goalId: null, notes: '',
 };
-export function HabitForm({ id, type }) {
+export function HabitForm({ id, type, prefill }) {
   const { pop, toast } = useApp();
   const [h, setH] = useState(null);
   const [adv, setAdv] = useState(false);
@@ -138,7 +138,7 @@ export function HabitForm({ id, type }) {
   useEffect(() => {
     (async () => {
       if (id) setH(await db.habits.get(id));
-      else setH({ ...BLANK, type: type || 'build', color: type === 'break' ? '#f87171' : '#4ade80', icon: type === 'break' ? 'i:Ban' : 'i:Sparkles' });
+      else setH({ ...BLANK, type: type || 'build', color: type === 'break' ? '#f87171' : '#4ade80', icon: type === 'break' ? 'i:Ban' : 'i:Sparkles', ...(prefill || {}) });
     })();
   }, [id]);
   if (!h) return <div className="screen no-nav" />;

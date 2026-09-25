@@ -127,6 +127,21 @@ export function Settings() {
         {isNative && <button className="btn" onClick={async () => { try { await LocalNotifications.changeExactNotificationSetting(); } catch { toast('Not needed on this Android version'); } }}>Allow on-time reminders (alarms)</button>}
         {isNative && <div className="small muted">On Poco / HyperOS: App info → Autostart ON and Battery saver → No restrictions, or reminders can be delayed.</div>}
 
+        <div className="eyebrow mt-8">Study & learnings</div>
+        <div className="card flat row between">
+          <div><div style={{ fontWeight: 600 }}>Daily study reminders</div><div className="small muted">One per subject — time is set in each subject</div></div>
+          <Toggle on={settings.studyReminders !== false} onChange={(v) => set('studyReminders', v)} />
+        </div>
+        <div className="grid-2">
+          <Field label="Revision reminder"><input type="time" className="input" value={settings.reviewTime || '18:30'} onChange={(e) => set('reviewTime', e.target.value)} /></Field>
+          <Field label="Max flashcards / day"><input className="input" inputMode="numeric" value={settings.reviewCap || 12} onChange={(e) => set('reviewCap', Math.max(3, Math.min(50, Number(e.target.value.replace(/\D/g, '')) || 12)))} /></Field>
+        </div>
+        <div className="card flat row between">
+          <div><div style={{ fontWeight: 600 }}>Random nuggets</div><div className="small muted">Things you learned pop up during the day (10am–9pm)</div></div>
+          <Toggle on={settings.nuggets !== false} onChange={(v) => set('nuggets', v)} />
+        </div>
+        {settings.nuggets !== false && <Field label="Nugget notifications per day"><Seg value={settings.nuggetsPerDay || 3} onChange={(v) => set('nuggetsPerDay', v)} options={[{ value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 5, label: '5' }]} /></Field>}
+
         <div className="eyebrow mt-8">Privacy</div>
         <div className="card flat row between">
           <div className="row gap-10"><Lock size={18} /><div><div style={{ fontWeight: 600 }}>Journal lock</div><div className="small muted">{settings.journalLock ? 'PIN required for journal' : 'Off'}</div></div></div>

@@ -3,7 +3,7 @@ import {
   Droplet, BookOpen, Dumbbell, Footprints, Brain, Moon, Sun, Apple, Salad, Coffee, Pill, Bike, Music, Mic, Guitar,
   PenLine, Code, Laptop, Languages, Heart, Smile, Phone, Users, Leaf, Flower2, Sparkles, Target, Timer, Bed,
   Wallet, PiggyBank, ShowerHead, Wind, Mountain, Waves, Camera, Palette, Gamepad2, Tv, Smartphone, Cigarette,
-  Wine, Candy, Ban, Flame, Zap, Star, CheckCircle2, GraduationCap, Brush, Home, Dog, HandHeart, Sunrise, Sprout,
+  Wine, Candy, Ban, Flame, Zap, Star, CheckCircle2, GraduationCap, Brush, Home, Dog, HandHeart, Sunrise, Sprout, Layers, Network, Cpu,
 } from 'lucide-react';
 import { tap } from '../lib/native';
 
@@ -11,7 +11,7 @@ export const ICONS = {
   Droplet, BookOpen, Dumbbell, Footprints, Brain, Moon, Sun, Sunrise, Apple, Salad, Coffee, Pill, Bike, Music, Mic, Guitar,
   PenLine, Code, Laptop, Languages, GraduationCap, Heart, Smile, Phone, Users, HandHeart, Leaf, Flower2, Sprout, Sparkles,
   Target, Timer, Bed, Wallet, PiggyBank, ShowerHead, Wind, Mountain, Waves, Camera, Palette, Brush, Home, Dog,
-  Gamepad2, Tv, Smartphone, Cigarette, Wine, Candy, Ban, Flame, Zap, Star, CheckCircle2,
+  Gamepad2, Tv, Smartphone, Cigarette, Wine, Candy, Ban, Flame, Zap, Star, CheckCircle2, Layers, Network, Cpu,
 };
 
 /* Renders a habit icon: 'i:Name' → line icon, anything else → emoji text */

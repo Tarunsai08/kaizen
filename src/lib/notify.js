@@ -2,7 +2,7 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { db, getKV } from '../db';
 import { isNative } from './native';
-import { hmToMin, today, dow } from './date';
+import { hmToMin, today, dow, addDays } from './date';
 import { checkinDays, DEFAULT_CHECKIN, habitActiveOn } from './logic';
 
 let scheduling = null;
@@ -123,6 +123,64 @@ async function buildAll() {
     let at = new Date(y, mo - 1, d + (p.every || 7), 18, 30);
     if (at.getTime() < Date.now()) { const n = new Date(); at = new Date(n.getFullYear(), n.getMonth(), n.getDate() + (n.getHours() >= 18 ? 1 : 0), 18, 30); }
     push({ title: `Reach out to ${p.name}?`, body: p.notes ? p.notes.slice(0, 80) : 'A quick message counts.', extra: { kind: 'route', route: 'person', id: p.id }, schedule: { at, allowWhileIdle: true } });
+  }
+  // Study: one reminder per active subject per day (next 3 days), skipped today once the daily goal is met
+  const subjects = (await db.subjects.toArray()).filter((s) => s.active !== false && s.reminder !== false);
+  if (settings.studyReminders !== false && subjects.length) {
+    const prog = await db.progress.toArray();
+    const done = new Set(prog.filter((p) => p.done).map((p) => p.id));
+    const sess = await db.studySessions.where('date').equals(today()).toArray();
+    const foc = await db.focus.where('date').equals(today()).toArray();
+    const { firstUndone, findNode } = await import('./study');
+    for (const s of subjects) {
+      const next = firstUndone(s.children, done);
+      if (!next) continue;
+      const path = findNode(s, next.id)?.path || [];
+      const minsToday = sess.filter((x) => x.sid === s.sid).reduce((a, b) => a + (b.mins || 0), 0) + foc.filter((f) => f.study === s.sid).reduce((a, b) => a + (b.minutes || 0), 0);
+      const lessonsToday = sess.filter((x) => x.sid === s.sid && x.kind === 'lesson').length;
+      const [hh, mm] = (s.reminderTime || '20:00').split(':').map(Number);
+      for (let k = 0; k < 3; k++) {
+        const d = new Date(); d.setDate(d.getDate() + k); d.setHours(hh, mm, 0, 0);
+        if (d.getTime() < Date.now()) continue;
+        if (k === 0 && (minsToday >= (s.dailyMins || 30) || lessonsToday > 0)) continue;
+        push({ title: `📚 ${s.title} · ${s.dailyMins || 30} min`, body: `Next up: ${next.title}${path.length ? ` (${path[path.length - 1].title})` : ''}`, extra: { kind: 'route', route: 'lesson', sid: s.sid, id: next.id }, schedule: { at: d, allowWhileIdle: true } });
+      }
+    }
+  }
+  // Spaced repetition: one notification a day with the number of cards due by then
+  const cards = await db.cards.toArray();
+  if (cards.length && settings.reviewTime) {
+    const reviewedToday = await db.reviews.where('date').equals(today()).count();
+    const [hh, mm] = settings.reviewTime.split(':').map(Number);
+    for (let k = 0; k < 4; k++) {
+      const d = new Date(); d.setDate(d.getDate() + k); d.setHours(hh, mm, 0, 0);
+      if (d.getTime() < Date.now()) continue;
+      const day = addDays(today(), k);
+      let n = cards.filter((c) => c.due <= day).length;
+      if (k === 0) n = Math.min(n, Math.max(0, (settings.reviewCap || 12) - reviewedToday));
+      n = Math.min(n, settings.reviewCap || 12);
+      if (!n) continue;
+      push({ title: `🧠 ${n} card${n > 1 ? 's' : ''} to revise`, body: 'A 2-minute recall keeps what you learned. Tap to start.', extra: { kind: 'route', route: 'review' }, schedule: { at: d, allowWhileIdle: true } });
+    }
+  }
+  // Learnings: a few random “nuggets” during the day (10:00–21:00)
+  if (settings.nuggets !== false) {
+    const learn = (await db.learnings.where('kind').equals('learn').toArray()).filter((l) => l.status !== 'archived');
+    if (learn.length) {
+      const per = Math.max(1, Math.min(5, settings.nuggetsPerDay || 3));
+      const pickW = (arr) => { const w = arr.map((l) => 1 / (1 + (l.shown || 0))); let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; };
+      for (let k = 0; k < 2; k++) {
+        const slots = [];
+        const span = (21 - 10) * 60 / per;
+        for (let j = 0; j < per; j++) slots.push(10 * 60 + Math.round(j * span + Math.random() * span * 0.8));
+        for (const m of slots) {
+          const d = new Date(); d.setDate(d.getDate() + k); d.setHours(Math.floor(m / 60), m % 60, 0, 0);
+          if (d.getTime() < Date.now() + 5 * 60000) continue;
+          const l = pickW(learn);
+          push({ title: `💡 ${l.title.slice(0, 60)}`, body: (l.body || l.source || 'Remember this?').slice(0, 160), extra: { kind: 'route', route: 'nugget', id: l.id }, schedule: { at: d, allowWhileIdle: true } });
+        }
+      }
+    }
   }
   return out;
 }
