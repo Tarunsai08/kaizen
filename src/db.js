@@ -91,6 +91,9 @@ export const DEFAULT_SETTINGS = {
   reviewCap: 12,
   nuggets: true,
   nuggetsPerDay: 3,
+  peopleTime: '09:30',
+  peopleWeekends: false,
+  sound: true,
 };
 
 /* ---------- seed on first run ---------- */

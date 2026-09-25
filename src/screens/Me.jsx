@@ -127,6 +127,18 @@ export function Settings() {
         {isNative && <button className="btn" onClick={async () => { try { await LocalNotifications.changeExactNotificationSetting(); } catch { toast('Not needed on this Android version'); } }}>Allow on-time reminders (alarms)</button>}
         {isNative && <div className="small muted">On Poco / HyperOS: App info → Autostart ON and Battery saver → No restrictions, or reminders can be delayed.</div>}
 
+        <div className="eyebrow mt-8">Keep in touch</div>
+        <div className="grid-2">
+          <Field label="Reminder time"><input type="time" className="input" value={settings.peopleTime || '09:30'} onChange={(e) => set('peopleTime', e.target.value)} /></Field>
+          <Field label="Days"><Seg value={settings.peopleWeekends ? 'we' : 'any'} onChange={(v) => set('peopleWeekends', v === 'we')} options={[{ value: 'any', label: 'Any day' }, { value: 'we', label: 'Sat/Sun' }]} /></Field>
+        </div>
+
+        <div className="eyebrow mt-8">Sound</div>
+        <div className="card flat row between">
+          <div><div style={{ fontWeight: 600 }}>Sound effects</div><div className="small muted">Chimes when you finish lessons and move to the next topic</div></div>
+          <Toggle on={settings.sound !== false} onChange={(v) => set('sound', v)} />
+        </div>
+
         <div className="eyebrow mt-8">Study & learnings</div>
         <div className="card flat row between">
           <div><div style={{ fontWeight: 600 }}>Daily study reminders</div><div className="small muted">One per subject — time is set in each subject</div></div>
