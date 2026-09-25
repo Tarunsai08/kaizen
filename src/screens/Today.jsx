@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Sparkles, Moon, Sunrise, Wind, ChevronRight, Dumbbell, User, Wallet, Smile, CheckSquare, Flame, Repeat2, Timer, Zap, Quote, Snowflake, Phone } from 'lucide-react';
+import { Plus, Sparkles, Moon, Sunrise, Wind, ChevronRight, Dumbbell, User, Wallet, Smile, CheckSquare, Flame, Repeat2, Timer, Zap, Quote, Snowflake, Phone, Lightbulb, Brain, GraduationCap } from 'lucide-react';
+import { StudyCard } from './Study';
+import { ExperimentsToday } from './Learnings';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
 import { today, greeting, dow, fmtHM, hmToMin, addDays, lastNDays, weekStart, DAYS_SHORT, MONTHS, parse } from '../lib/date';
@@ -255,9 +257,15 @@ export default function Today() {
         </div>
       </div>
 
+      {/* Study + experiments */}
+      <div className="section col gap-8">
+        <StudyCard />
+        <ExperimentsToday />
+      </div>
+
       {/* Money + bored */}
       <div className="grid-2 section">
-        <button className="card card-press" style={{ textAlign: 'left' }} onClick={() => goTab('money')}>
+        <button className="card card-press" style={{ textAlign: 'left' }} onClick={() => push('MoneyScreen')}>
           <Wallet size={18} color="var(--money)" />
           <div className="h2 mt-8 num">{money(spent, settings.currency)}</div>
           <div className="small muted">spent today{untagged ? ` · ${untagged} untagged` : ''}</div>
@@ -289,6 +297,9 @@ export default function Today() {
             { l: 'Workout', i: Dumbbell, c: 'var(--fit)', a: () => push('Workout', { date: t }) },
             { l: 'Sleep', i: Moon, c: 'var(--sleep)', a: () => push('SleepLog', {}) },
             { l: 'Journal', i: Sparkles, c: 'var(--goal)', a: () => push('NightReview') },
+            { l: 'Learned', i: Lightbulb, c: 'var(--goal)', a: () => push('LearningForm') },
+            { l: 'Revise', i: Brain, c: 'var(--task)', a: () => push('ReviewDeck') },
+            { l: 'Study', i: GraduationCap, c: 'var(--task)', a: () => goTab('study') },
           ].map((x) => (
             <button key={x.l} className="card flat card-press col" style={{ alignItems: 'center', gap: 8, padding: '18px 8px' }} onClick={() => { setFab(false); x.a(); }}>
               <x.i size={22} color={x.c} />

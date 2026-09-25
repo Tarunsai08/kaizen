@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { X, Shuffle, Globe, Palette, Hourglass, Plus, ThumbsUp, ThumbsDown, Settings2, Trash2, ExternalLink, BarChart3 } from 'lucide-react';
+import { X, Shuffle, Globe, Palette, Hourglass, Plus, ThumbsUp, ThumbsDown, Settings2, Trash2, ExternalLink, BarChart3, AppWindow, Search } from 'lucide-react';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
 import { today, fmtClock, periodRange, buckets, fmtDur } from '../lib/date';
 import { TopBar, Seg, Field, Sheet, Chips, TagSelect, Stat, Empty, PeriodToggle, Ring, useInterval, EmojiPicker, MOODS, MoodScale } from '../ui/kit';
 import { Bars, HBars, WeekHourGrid } from '../ui/charts';
 import { SectionHead } from '../ui/rows';
-import { success, tap, openUrl } from '../lib/native';
+import { success, tap, openUrl, Kaizen, isAndroid, safe } from '../lib/native';
 
 const OPTS = {
   stay: { label: 'Stay in boredom', sub: 'Do nothing, on purpose', icon: Hourglass, color: 'var(--sleep)' },
   site: { label: 'Explore a website', sub: 'From your go-to list', icon: Globe, color: 'var(--money)' },
   hobby: { label: 'Explore a hobby', sub: 'Something with your hands or voice', icon: Palette, color: 'var(--fit)' },
+  app: { label: 'Open a good app', sub: 'Substack, Medito, Kindle… your picks', icon: AppWindow, color: 'var(--task)' },
 };
 
 export function Boredom() {
@@ -23,7 +24,8 @@ export function Boredom() {
   const [session, setSession] = useState(null); // {option, refId, name, start, duration}
   const sites = useLiveQuery(() => db.sites.toArray(), []) || [];
   const hobbies = useLiveQuery(() => db.hobbies.toArray(), []) || [];
-  const visits = useLiveQuery(() => db.boredom.where('option').equals('site').toArray(), []) || [];
+  const visits = useLiveQuery(() => db.boredom.where('option').anyOf('site', 'app').toArray(), []) || [];
+  const apps = useLiveQuery(() => db.apps.toArray(), []) || [];
   const [pendingVisit, setPendingVisit] = useState(null);
 
   // Ask "was it worth it?" when coming back from a site
@@ -33,7 +35,16 @@ export function Boredom() {
     return () => document.removeEventListener('visibilitychange', h);
   }, [pendingVisit]);
 
-  const score = (s) => { const v = visits.filter((x) => x.refId === s.id && x.worth); return v.reduce((a, b) => a + (b.worth === 'up' ? 1 : -1), 0); };
+  const appScore = (a) => visits.filter((x) => x.option === 'app' && x.refId === a.id && x.worth).reduce((s, b) => s + (b.worth === 'up' ? 1 : -1), 0);
+  const openApp = async (a) => {
+    const id = await db.boredom.add({ option: 'app', refId: a.id, ts: Date.now(), date: today(), durationSec: 0, moodBefore: before });
+    setPendingVisit({ id, start: Date.now(), site: { name: a.label, url: a.url }, app: a });
+    if (isAndroid && a.pkg) {
+      try { await Kaizen.launchApp({ pkg: a.pkg, url: a.url || '', minutes: 30 }); } catch (e) { if (a.url) openUrl(a.url); else toast('Couldn’t open ' + a.label); }
+    } else if (a.url) openUrl(a.url);
+    setTimeout(() => setStage('worth'), 1500);
+  };
+  const score = (s) => { const v = visits.filter((x) => x.option === 'site' && x.refId === s.id && x.worth); return v.reduce((a, b) => a + (b.worth === 'up' ? 1 : -1), 0); };
   const sortedSites = [...sites].sort((a, b) => score(b) - score(a));
   const fitHobbies = hobbies.filter((h) => !time || !h.duration || (time === 10 ? h.duration <= 15 : time === 30 ? h.duration <= 40 : true));
 
@@ -98,7 +109,7 @@ export function Boredom() {
             <button className="btn primary lg grow" onClick={() => ans('up')}><ThumbsUp size={20} /> Yes</button>
           </div>
           <button className="btn ghost" onClick={() => ans(null)}>Skip</button>
-          <button className="btn ghost small" onClick={() => pendingVisit && openUrl(pendingVisit.site.url)}>Open the site again</button>
+          <button className="btn ghost small" onClick={() => pendingVisit && (pendingVisit.app ? openApp(pendingVisit.app) : openUrl(pendingVisit.site.url))}>Open it again</button>
         </div>
       </div>
     );
@@ -151,6 +162,27 @@ export function Boredom() {
               </div>
             </>
           ) : <Empty icon="🌐" title="No sites yet" action={<button className="btn primary sm" onClick={() => push('Sites')}>Add sites</button>} />}
+          <button className="btn ghost block mt-16" onClick={() => setStage('choose')}>Back</button>
+        </>
+      )}
+      {stage === 'app' && (
+        <>
+          <div className="row between"><h1 className="h1">Apps</h1><button className="icon-btn" onClick={() => push('BoredApps')}><Settings2 size={18} /></button></div>
+          <p className="small muted mt-8">Opening them from here skips Shield’s pause for 30 minutes.</p>
+          {apps.length ? (
+            <>
+              <button className="btn primary block lg mt-16" onClick={() => openApp(apps[Math.floor(Math.random() * apps.length)])}><Shuffle size={18} /> Surprise me</button>
+              <div className="list mt-16">
+                {[...apps].sort((a, b) => appScore(b) - appScore(a)).map((a) => (
+                  <button key={a.id} className="list-item" onClick={() => openApp(a)}>
+                    <AppIcon pkg={a.pkg} label={a.label} />
+                    <div className="grow"><div style={{ fontWeight: 560 }}>{a.label}</div><div className="tiny muted ellipsis">{[a.tag, a.note, a.url ? 'opens a link' : ''].filter(Boolean).join(' · ')}</div></div>
+                    {appScore(a) !== 0 && <span className="badge">{appScore(a) > 0 ? '👍' : '👎'} {Math.abs(appScore(a))}</span>}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : <Empty icon="📱" title="No apps yet" sub="Add the apps that leave you better off — Substack, Medito, Kindle, Duolingo…" action={<button className="btn primary sm" onClick={() => push('BoredApps')}>Add apps</button>} />}
           <button className="btn ghost block mt-16" onClick={() => setStage('choose')}>Back</button>
         </>
       )}
@@ -223,6 +255,68 @@ export function Sites({ prefill }) {
             <div className="row">
               {edit.id && <button className="btn danger" onClick={async () => { await db.sites.delete(edit.id); setEdit(null); }}><Trash2 size={16} /></button>}
               <button className="btn primary grow" onClick={async () => { if (!edit.name || !edit.url) return; const r = { ...edit, url: /^https?:\/\//.test(edit.url) ? edit.url : 'https://' + edit.url }; if (r.id) await db.sites.put(r); else await db.sites.add(r); setEdit(null); }}>Save</button>
+            </div>
+          </div>
+        )}
+      </Sheet>
+    </div>
+  );
+}
+
+/* ---------- app icon (Android) ---------- */
+const ICON_CACHE = {};
+export function AppIcon({ pkg, label, size = 32 }) {
+  const [src, setSrc] = useState(ICON_CACHE[pkg] || null);
+  useEffect(() => {
+    if (!pkg || ICON_CACHE[pkg] || !isAndroid) return;
+    safe(() => Kaizen.getAppIcon({ pkg })).then((r) => { if (r?.data) { ICON_CACHE[pkg] = 'data:image/png;base64,' + r.data; setSrc(ICON_CACHE[pkg]); } });
+  }, [pkg]);
+  if (src) return <img src={src} alt="" width={size} height={size} style={{ borderRadius: size * 0.25, flexShrink: 0 }} />;
+  return <div className="app-ico" style={{ width: size, height: size, borderRadius: size * 0.3, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', fontWeight: 700, flexShrink: 0 }}>{(label || '?')[0]}</div>;
+}
+
+/* ---------- manage apps for boredom ---------- */
+export function BoredApps() {
+  const apps = useLiveQuery(() => db.apps.toArray(), []) || [];
+  const [edit, setEdit] = useState(null);
+  const [pick, setPick] = useState(false);
+  const [installed, setInstalled] = useState(null);
+  const [q, setQ] = useState('');
+  const openPicker = async () => {
+    setPick(true);
+    if (!installed) {
+      const r = await safe(() => Kaizen.listApps(), { apps: [] });
+      setInstalled((r?.apps || []).sort((a, b) => a.label.localeCompare(b.label)));
+    }
+  };
+  return (
+    <div className="screen no-nav page-enter">
+      <TopBar title="Good apps" right={<button className="icon-btn" onClick={() => (isAndroid ? openPicker() : setEdit({ label: '', pkg: '', url: '', tag: 'Learning', note: '' }))}><Plus size={20} /></button>} />
+      <p className="small muted" style={{ marginTop: -4 }}>Apps you’d rather reach for when bored. Add a link to open a specific page inside one (e.g. your Substack reading list).</p>
+      <div className="list mt-12">
+        {apps.map((a) => <button key={a.id} className="list-item" onClick={() => setEdit(a)}><AppIcon pkg={a.pkg} label={a.label} /><div className="grow"><div style={{ fontWeight: 560 }}>{a.label}</div><div className="tiny muted ellipsis">{[a.tag, a.url].filter(Boolean).join(' · ') || a.pkg}</div></div></button>)}
+        {!apps.length && <button className="list-item muted" onClick={() => (isAndroid ? openPicker() : setEdit({ label: '', pkg: '', url: '', tag: 'Learning', note: '' }))}><Plus size={16} /> Add an app</button>}
+      </div>
+      <Sheet open={pick} onClose={() => setPick(false)} title="Pick an app">
+        <div className="row gap-8 mb-12"><Search size={16} className="muted" /><input className="input" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="list" style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+          {!installed && <div className="list-item muted"><span className="spin" /> Loading apps…</div>}
+          {(installed || []).filter((a) => a.label.toLowerCase().includes(q.toLowerCase())).map((a) => (
+            <button key={a.pkg} className="list-item" onClick={() => { setPick(false); setEdit({ label: a.label, pkg: a.pkg, url: '', tag: 'Learning', note: '' }); }}><AppIcon pkg={a.pkg} label={a.label} size={28} /><div className="grow">{a.label}</div></button>
+          ))}
+        </div>
+      </Sheet>
+      <Sheet open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Edit app' : 'Add app'}>
+        {edit && (
+          <div className="form">
+            <Field label="Name"><input className="input" value={edit.label} onChange={(e) => setEdit({ ...edit, label: e.target.value })} /></Field>
+            {!isAndroid && <Field label="Android package (optional)"><input className="input" placeholder="com.substack.app" value={edit.pkg} onChange={(e) => setEdit({ ...edit, pkg: e.target.value })} /></Field>}
+            <Field label="Open a link inside it (optional)" hint="e.g. https://substack.com/inbox — leave empty to just open the app"><input className="input" inputMode="url" value={edit.url} onChange={(e) => setEdit({ ...edit, url: e.target.value })} /></Field>
+            <Field label="Tag"><Chips value={edit.tag} onChange={(v) => setEdit({ ...edit, tag: v })} options={['Learning', 'Calm', 'Creative', 'Fun']} /></Field>
+            <Field label="Why it’s worth opening"><input className="input" value={edit.note} onChange={(e) => setEdit({ ...edit, note: e.target.value })} /></Field>
+            <div className="row">
+              {edit.id && <button className="btn danger" onClick={async () => { await db.apps.delete(edit.id); setEdit(null); }}><Trash2 size={16} /></button>}
+              <button className="btn primary grow" disabled={!edit.label.trim()} onClick={async () => { const r = { ...edit, url: edit.url && !/^[a-z]+:\/\//i.test(edit.url) ? 'https://' + edit.url : edit.url }; if (r.id) await db.apps.put(r); else await db.apps.add(r); setEdit(null); }}>Save</button>
             </div>
           </div>
         )}

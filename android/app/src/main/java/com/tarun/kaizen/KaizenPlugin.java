@@ -329,6 +329,40 @@ public class KaizenPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Open an app chosen in the Boredom kit (optionally a deep link inside it) and let it skip the Shield pause for a while. */
+    @PluginMethod
+    public void launchApp(PluginCall call) {
+        String pkg = call.getString("pkg", "");
+        String url = call.getString("url", "");
+        int minutes = call.getInt("minutes", 30);
+        Context ctx = getContext();
+        if (pkg.length() > 0) {
+            ctx.getSharedPreferences(SHIELD_PREFS, Context.MODE_PRIVATE).edit()
+                .putLong("allow_" + pkg, System.currentTimeMillis() + minutes * 60000L).apply();
+        }
+        Intent intent = null;
+        if (url.length() > 0) {
+            intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            if (pkg.length() > 0) intent.setPackage(pkg);
+            if (intent.resolveActivity(ctx.getPackageManager()) == null) {
+                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            }
+        } else if (pkg.length() > 0) {
+            intent = ctx.getPackageManager().getLaunchIntentForPackage(pkg);
+        }
+        if (intent == null) {
+            call.reject("App not found");
+            return;
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            ctx.startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Could not open: " + e.getMessage());
+        }
+    }
+
     @PluginMethod
     public void goHome(PluginCall call) {
         Intent home = new Intent(Intent.ACTION_MAIN);

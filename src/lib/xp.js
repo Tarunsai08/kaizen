@@ -8,6 +8,7 @@ export const AREAS = {
   body: { label: 'Body', color: 'var(--fit)', icon: 'i:Dumbbell' },
   mind: { label: 'Mind', color: 'var(--mood)', icon: 'i:Brain' },
   work: { label: 'Work', color: 'var(--task)', icon: 'i:Laptop' },
+  learn: { label: 'Learning', color: '#a78bfa', icon: 'i:GraduationCap' },
   money: { label: 'Money', color: 'var(--money)', icon: 'i:Wallet' },
   social: { label: 'People', color: 'var(--goal)', icon: 'i:Users' },
 };
@@ -28,7 +29,7 @@ export async function computeXP() {
     db.reframes.toArray(), db.wheels.toArray(), db.interactions.toArray(), db.boredom.toArray(), db.steps.toArray(), db.transactions.toArray(),
   ]);
   const t = today();
-  const areas = { body: 0, mind: 0, work: 0, money: 0, social: 0 };
+  const areas = { body: 0, mind: 0, work: 0, learn: 0, money: 0, social: 0 };
   const todayXP = { v: 0 };
   const add = (area, xp, date) => { areas[area] += xp; if (date === t) todayXP.v += xp; };
 
@@ -66,6 +67,11 @@ export async function computeXP() {
   txs.forEach((x) => { const m = x.date.slice(0, 7); months[m] = (months[m] || 0) + (x.direction === 'credit' ? x.amount : -x.amount); });
   Object.entries(months).forEach(([m, v]) => { if (v > 0 && m < t.slice(0, 7)) add('money', 50, monthEnd(m + '-01')); });
 
+  const [prog, revs, expLogs, learnings] = await Promise.all([db.progress.toArray(), db.reviews.toArray(), db.expLogs.toArray(), db.learnings.toArray()]);
+  prog.forEach((p) => { if (p.done && p.doneAt) add('learn', p.bulk ? 2 : 20, p.doneAt); });
+  revs.forEach((r) => add('learn', 3, r.date));
+  expLogs.forEach((l) => { if (l.did) add('mind', 6, l.date); });
+  learnings.forEach((l) => add('learn', 3, l.date));
   const total = Object.values(areas).reduce((a, b) => a + b, 0);
   const out = { total: levelFor(total, 100), today: todayXP.v, areas: {} };
   for (const k of Object.keys(areas)) out.areas[k] = levelFor(areas[k], 40);

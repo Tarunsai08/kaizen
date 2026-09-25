@@ -39,6 +39,19 @@ db.version(2).stores({
   steps: '&date',
 });
 
+// v3: study roadmaps, progress, spaced repetition, learnings & experiments, boredom apps
+db.version(3).stores({
+  subjects: '++id, &sid, order',
+  progress: '&id, sid, doneAt',
+  studySessions: '++id, date, sid',
+  cards: '&id, sid, due',
+  reviews: '++id, date, sid',
+  learnings: '++id, kind, status, date',
+  experiments: '++id, status, learningId',
+  expLogs: '++id, expId, date, [expId+date]',
+  apps: '++id',
+});
+
 /* ---------- key/value settings ---------- */
 export async function getKV(key, fallback) {
   const row = await db.kv.get(key);
@@ -73,6 +86,11 @@ export const DEFAULT_SETTINGS = {
   healthConnect: false,
   shield: { shorts: { youtube: true, instagram: true, facebook: false, snapchat: false }, pauseApps: [], pauseSeconds: 6, allowMinutes: 10, enabled: false },
   screenLimits: {},
+  studyReminders: true,
+  reviewTime: '18:30',
+  reviewCap: 12,
+  nuggets: true,
+  nuggetsPerDay: 3,
 };
 
 /* ---------- seed on first run ---------- */

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, MessageSquareText, ChevronRight, Repeat, Trash2, TrendingUp, TrendingDown, Tag, Smartphone, ClipboardPaste, Check } from 'lucide-react';
+import { Plus, MessageSquareText, ChevronRight, Repeat, Trash2, TrendingUp, TrendingDown, Tag, Smartphone, ClipboardPaste, Check, ChevronLeft } from 'lucide-react';
 import { db, setKV, getKV } from '../db';
 import { useApp } from '../ctx';
 import { today, periodRange, prevPeriodRange, buckets, fmtDay, fmtTime, ymd, periodLabel, addDays } from '../lib/date';
@@ -39,8 +39,9 @@ export async function importMessages(msgs) {
 /* =========================================================
    MONEY TAB
    ========================================================= */
-export function Money() {
-  const { push, settings, toast } = useApp();
+export function MoneyScreen() { return <Money pushed />; }
+export function Money({ pushed }) {
+  const { push, pop, settings, toast } = useApp();
   const [period, setPeriod] = useState('month');
   const cats = useCats();
   const txs = useLiveQuery(() => db.transactions.toArray(), []);
@@ -63,9 +64,9 @@ export function Money() {
   const recent = [...txs].sort((a, b) => b.ts - a.ts).slice(0, 8);
 
   return (
-    <div className="screen fade-in">
+    <div className={pushed ? 'screen no-nav page-enter' : 'screen fade-in'}>
       <div className="row between" style={{ marginBottom: 16, marginTop: 4 }}>
-        <h1 className="h1">Money</h1>
+        <div className="row gap-6">{pushed && <button className="icon-btn" onClick={pop} aria-label="Back"><ChevronLeft size={22} /></button>}<h1 className="h1">Money</h1></div>
         <button className="icon-btn" onClick={() => push('TxForm', {})} aria-label="Add"><Plus size={22} /></button>
       </div>
       <PeriodToggle value={period} onChange={setPeriod} />

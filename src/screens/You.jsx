@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ChevronRight, Sparkles, CalendarDays, BookOpen, Wind, Globe, Palette, Repeat, Settings as Cog, Snowflake, Grid3x3, Gift, X, ChevronLeft, Trophy, Pencil } from 'lucide-react';
+import { Wallet, ChevronRight, Sparkles, CalendarDays, BookOpen, Wind, Globe, Palette, Repeat, Settings as Cog, Snowflake, Grid3x3, Gift, X, ChevronLeft, Trophy, Pencil } from 'lucide-react';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
 import { today, addDays, parse, MONTHS, monthStart, monthEnd, addMonths, range, fmtDur, DAYS_SHORT, dow } from '../lib/date';
@@ -35,6 +35,7 @@ export function You() {
   const lm = addMonths(monthStart(), -1);
   const lastMonth = Object.keys(scores).some((d) => d.startsWith(lm.slice(0, 7))) ? lm : monthStart();
   const rows = [
+    { l: 'Money', s: 'Spending, UPI & bank SMS', i: Wallet, c: 'var(--money)', go: 'MoneyScreen' },
     { l: 'Insights', s: 'Patterns across your data', i: Sparkles, c: 'var(--accent)', go: 'Insights' },
     { l: 'Weekly review', s: 'Your week in one card', i: CalendarDays, c: 'var(--goal)', go: 'WeeklyReview' },
     { l: 'Journal', s: 'Night reviews & entries', i: BookOpen, c: 'var(--mood)', go: 'JournalHistory' },

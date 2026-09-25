@@ -14,8 +14,8 @@ import { success, tap, isNative } from '../lib/native';
 const NOTIF_ID = 777001;
 
 /* Focus timer (Forest / Pomodoro): your plant grows while you stay focused. */
-export function Focus({ taskId }) {
-  const { pop, toast, celebrate } = useApp();
+export function Focus({ taskId, study }) {
+  const { pop, push, toast, celebrate } = useApp();
   const tasks = useLiveQuery(() => db.tasks.filter((t) => !t.done && !t.skipped).toArray(), []) || [];
   const [task, setTask] = useState(taskId || null);
   const [mins, setMins] = useState(25);
@@ -72,7 +72,7 @@ export function Focus({ taskId }) {
     cancelNotif();
     if (stage === 'break') { setStage('setup'); setStart(0); return; }
     const m = Math.round(elapsed / 60);
-    if (m >= 1) await db.focus.add({ date: today(), ts: start, minutes: m, planned: mins, taskId: task, label: taskObj?.title || 'Focus session', completed: complete, interruptions: leaves });
+    if (m >= 1) await db.focus.add({ date: today(), ts: start, minutes: m, planned: mins, taskId: task, label: study?.label || taskObj?.title || 'Focus session', completed: complete, interruptions: leaves, ...(study ? { study: study.sid, nodeId: study.id } : {}) });
     if (complete) { success(); celebrate(); }
     setStage('done');
   };
@@ -90,10 +90,10 @@ export function Focus({ taskId }) {
         <div className="label mt-24 mb-8">Duration</div>
         <Chips value={mins} onChange={setMins} options={[15, 25, 45, 60, 90].map((v) => ({ value: v, label: `${v} min` }))} />
         <div className="label mt-24 mb-8">Working on</div>
-        <select className="select" value={task || ''} onChange={(e) => setTask(e.target.value ? Number(e.target.value) : null)}>
+        {study ? <div className="card flat small" style={{ fontWeight: 600 }}>📚 {study.label}</div> : <select className="select" value={task || ''} onChange={(e) => setTask(e.target.value ? Number(e.target.value) : null)}>
           <option value="">Nothing specific</option>
           {tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-        </select>
+        </select>}
         <div className="grow" />
         <button className="btn lg block mt-24" style={{ background: 'var(--bored)', color: '#000' }} onClick={() => begin('run')}><Play size={18} /> Start {mins} min</button>
       </div>
@@ -108,6 +108,7 @@ export function Focus({ taskId }) {
           <h1 className="h1">{Math.round(elapsed / 60)} minutes of focus</h1>
           <p className="dim">{leaves ? `You stepped away ${leaves} time${leaves > 1 ? 's' : ''}.` : 'No distractions. Beautiful.'}</p>
         </div>
+        {study && <StudyDone study={study} />}
         {taskObj && <button className="btn block mb-8" onClick={async () => { await completeTask(taskObj, true); toast('Task done'); pop(); }}><Check size={18} /> Mark “{taskObj.title}” done</button>}
         <div className="row">
           <button className="btn lg grow" onClick={() => begin('break')}><Coffee size={18} /> 5 min break</button>
@@ -133,6 +134,21 @@ export function Focus({ taskId }) {
         <button className="btn lg grow" onClick={() => finish(false)}>{stage === 'break' ? 'Skip' : 'Finish early'}</button>
       </div>
     </div>
+  );
+}
+
+function StudyDone({ study }) {
+  const { pop, toast } = useApp();
+  const done = useLiveQuery(() => db.progress.get(study.id), [study.id]);
+  if (done?.done) return null;
+  return (
+    <button className="btn block mb-8" onClick={async () => {
+      const { completeLesson, findNode } = await import('../lib/study');
+      const s = await db.subjects.where('sid').equals(study.sid).first();
+      const hit = s && findNode(s, study.id);
+      if (hit) { await completeLesson(study.sid, hit.node); success(); toast('Lesson complete'); }
+      pop(); pop();
+    }}><Check size={18} /> Mark “{study.label}” complete</button>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Sun, Repeat2, HeartPulse, Wallet, CalendarCheck, Check } from 'lucide-react';
+import { Sun, Repeat2, HeartPulse, GraduationCap, CalendarCheck, Check } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { db, seed, DEFAULT_SETTINGS, setKV } from './db';
@@ -19,10 +19,10 @@ import { today, nowHM } from './lib/date';
 import Today from './screens/Today';
 import { Habits, HabitForm, HabitDetail, Urge } from './screens/Habits';
 import { Workout, ActivityForm, PresetForm, ScheduleEdit, Library, SleepLog, SleepStats, FitnessStats } from './screens/Fitness';
-import { Money, TxForm, MoneyInsights, Subscriptions, SmsImport, TagReview, AllTx, importMessages } from './screens/Money';
+import { MoneyScreen, TxForm, MoneyInsights, Subscriptions, SmsImport, TagReview, AllTx, importMessages } from './screens/Money';
 import { parseSms } from './lib/sms';
 import { Plan, TaskForm, GoalForm, GoalDetail, GoalReview, Projects } from './screens/Plan';
-import { Boredom, Sites, Hobbies, BoredStats } from './screens/Boredom';
+import { Boredom, Sites, Hobbies, BoredStats, BoredApps } from './screens/Boredom';
 import { NightReview, Morning, JournalHistory, JournalDay, Insights, WeeklyReview, MoodStats } from './screens/Journal';
 import { Settings, CategoriesEdit } from './screens/Me';
 import { Health } from './screens/Health';
@@ -30,8 +30,12 @@ import { MoodCheckin, Breathe, ReframeList, Reframe, Wheel } from './screens/Min
 import { Focus, FocusStats } from './screens/Focus';
 import { PersonDetail } from './screens/People';
 import { You, CompanionScreen, YearPixels, Wrapped } from './screens/You';
-import { AppLimit, ShieldSettings, Pause } from './screens/ScreenTime';
+import { AppLimit, ShieldSettings, Pause, ShieldDiagnostics } from './screens/ScreenTime';
 import Onboarding from './screens/Onboarding';
+import { Study, StudyImport, SubjectSettings, ReviewDeck, StudyStats, ReviewPrompt } from './screens/Study';
+import { Roadmap, Lesson } from './screens/Roadmap';
+import { LearningForm, LearningDetail, ExperimentDetail, Nugget, NuggetPrompt } from './screens/Learnings';
+import { ensureSubjects } from './lib/study';
 import Companion from './ui/Companion';
 
 const SCREENS = {
@@ -39,18 +43,20 @@ const SCREENS = {
   Workout, ActivityForm, PresetForm, ScheduleEdit, Library, SleepLog, SleepStats, FitnessStats,
   TxForm, MoneyInsights, Subscriptions, SmsImport, TagReview, AllTx,
   TaskForm, GoalForm, GoalDetail, GoalReview, Projects,
-  Boredom, Sites, Hobbies, BoredStats,
+  Boredom, Sites, Hobbies, BoredStats, BoredApps,
   NightReview, Morning, JournalHistory, JournalDay, Insights, WeeklyReview, MoodStats,
   Me: You, You, Settings, CategoriesEdit,
   MoodCheckin, Breathe, ReframeList, Reframe, Wheel, Focus, FocusStats, PersonDetail,
-  CompanionScreen, YearPixels, Wrapped, AppLimit, ShieldSettings, Pause,
+  CompanionScreen, YearPixels, Wrapped, AppLimit, ShieldSettings, Pause, ShieldDiagnostics,
+  MoneyScreen, Roadmap, Lesson, StudyImport, SubjectSettings, ReviewDeck, StudyStats,
+  LearningForm, LearningDetail, ExperimentDetail, Nugget, ShareChooser,
 };
 const TABS = [
   { key: 'today', label: 'Today', icon: Sun, C: Today },
   { key: 'plan', label: 'Plan', icon: CalendarCheck, C: Plan },
+  { key: 'study', label: 'Study', icon: GraduationCap, C: Study },
   { key: 'habits', label: 'Habits', icon: Repeat2, C: Habits },
   { key: 'health', label: 'Health', icon: HeartPulse, C: Health },
-  { key: 'money', label: 'Money', icon: Wallet, C: Money },
 ];
 
 export default function App() {
@@ -65,6 +71,7 @@ export default function App() {
     (async () => {
       await seed();
       await rollRecurring();
+      ensureSubjects();
       setReady(true);
     })();
   }, []);
@@ -148,6 +155,9 @@ export default function App() {
         else if (extra.route === 'morning') push('Morning');
         else if (extra.route === 'goals') { setTab('plan'); }
         else if (extra.route === 'person') push('PersonDetail', { id: extra.id });
+        else if (extra.route === 'lesson') push('Lesson', { sid: extra.sid, id: extra.id });
+        else if (extra.route === 'review') push('ReviewDeck');
+        else if (extra.route === 'nugget') push('Nugget', { id: extra.id });
       }
     });
   }, [ready]);
@@ -167,12 +177,7 @@ export default function App() {
           if (n) push('TagReview');
           return;
         }
-        const m = r.text.match(/https?:\/\/\S+/);
-        if (m) {
-          let name = r.subject || '';
-          if (!name) { try { name = new URL(m[0]).hostname.replace(/^www\./, ''); } catch {} }
-          push('Sites', { prefill: { name, url: m[0], tag: 'Fun', note: '' } });
-        }
+        push('ShareChooser', { text: r.text, subject: r.subject || '' });
       } catch {}
     };
     // Widget / app-shortcut / Shield launches, e.g. kaizen://mood/4, kaizen://bored, kaizen://pause?pkg=…
@@ -204,6 +209,9 @@ export default function App() {
     else if (a === 'task') push('TaskForm', { due: today() });
     else if (a === 'pause' && q.pkg) push('Pause', { pkg: q.pkg, label: q.label });
     else if (a === 'today') { setStack([]); setTab('today'); }
+    else if (a === 'study') { setStack([]); setTab('study'); }
+    else if (a === 'review') push('ReviewDeck');
+    else if (a === 'learned') push('LearningForm');
   }, []);
 
   // keep native Shield config + widgets current
@@ -219,7 +227,9 @@ export default function App() {
   const sig = useLiveQuery(async () => {
     const [h, t, g] = await Promise.all([db.habits.toArray(), db.tasks.filter((x) => !x.done).toArray(), db.goals.toArray()]);
     const [pp, ii] = await Promise.all([db.people.toArray(), db.interactions.count()]);
-    return JSON.stringify([h.map((x) => [x.id, x.reminder, x.reminderTime, x.intervalMins, x.windowStart, x.windowEnd, x.days, x.archived, x.name]), t.map((x) => [x.id, x.due, x.dueTime, x.reminder]), g.map((x) => [x.id, x.status, x.checkinFreq, x.checkinTime]), pp.map((x) => [x.id, x.every]), ii]);
+    const [subs, pc, cc, rv, ss, ln] = await Promise.all([db.subjects.toArray(), db.progress.count(), db.cards.count(), db.reviews.count(), db.studySessions.count(), db.learnings.count()]);
+    const study = [subs.map((x) => [x.sid, x.reminder, x.reminderTime, x.active, x.dailyMins]), pc, cc, rv, ss, ln, settings.reviewTime, settings.studyReminders, settings.nuggets, settings.nuggetsPerDay];
+    return JSON.stringify([study, h.map((x) => [x.id, x.reminder, x.reminderTime, x.intervalMins, x.windowStart, x.windowEnd, x.days, x.archived, x.name]), t.map((x) => [x.id, x.due, x.dueTime, x.reminder]), g.map((x) => [x.id, x.status, x.checkinFreq, x.checkinTime]), pp.map((x) => [x.id, x.every]), ii]);
   }, []);
   useEffect(() => { if (ready && sig) rescheduleSoon(); }, [sig, ready, settings.bedtimeTarget, settings.morningReminder, settings.notifications]);
 
@@ -268,6 +278,7 @@ export default function App() {
         )}
         {toastMsg && <div className="toast" key={toastMsg + Math.random()}><Check size={16} />{toastMsg}</div>}
         <Confetti show={confetti} />
+        <DailyPrompts />
         <Sheet open={!!levelUp} onClose={() => setLevelUp(null)}>
           <div className="col" style={{ alignItems: 'center', textAlign: 'center', gap: 8, padding: '10px 0 6px' }}>
             <div className="float"><Companion stage={stageFor(levelUp || 1).index} mood="happy" size={130} /></div>
@@ -279,6 +290,42 @@ export default function App() {
         </Sheet>
       </div>
     </AppCtx.Provider>
+  );
+}
+
+/* At most one gentle prompt per app open: revision first, otherwise maybe a nugget */
+function DailyPrompts() {
+  const [reviewShown, setReviewShown] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const kv = await db.kv.get('reviewPopup');
+      const due = await db.cards.where('due').belowOrEqual(today()).count();
+      setReviewShown(kv?.value !== today() && due > 0 && new Date().getHours() >= 8);
+    })();
+  }, []);
+  if (reviewShown === null) return null;
+  return reviewShown ? <ReviewPrompt /> : <NuggetPrompt />;
+}
+
+/* Something was shared to Kaizen: a link can go to Learnings or the Boredom kit */
+function ShareChooser({ text, subject }) {
+  const { pop, push } = React.useContext(AppCtx);
+  const url = (text.match(/https?:\/\/\S+/) || [])[0];
+  const clean = text.replace(url || '', '').trim();
+  const go = (name, props) => { pop(); setTimeout(() => push(name, props), 0); };
+  useEffect(() => { if (!url) go('LearningForm', { prefill: { text: clean || text, subject } }); }, []);
+  if (!url) return <div className="screen no-nav" />;
+  let host = '';
+  try { host = new URL(url).hostname.replace(/^www\./, ''); } catch {}
+  return (
+    <div className="screen no-nav page-enter">
+      <div className="topbar"><button className="icon-btn" onClick={pop}>✕</button><div className="title">Save this link</div></div>
+      <div className="card flat small ellipsis">{subject || clean || host}</div>
+      <div className="list mt-16">
+        <button className="menu-row" onClick={() => go('LearningForm', { prefill: { text: [subject || clean, url].filter(Boolean).join('\n'), subject: host } })}><span style={{ fontSize: 20 }}>💡</span><div className="grow"><div className="t">Something I learned</div><div className="s">Learnings → to try or to remember</div></div></button>
+        <button className="menu-row" onClick={() => go('Sites', { prefill: { name: subject || host, url, tag: 'Learning', note: '' } })}><span style={{ fontSize: 20 }}>🌐</span><div className="grow"><div className="t">A website for when I’m bored</div><div className="s">Boredom kit → websites</div></div></button>
+      </div>
+    </div>
   );
 }
 
