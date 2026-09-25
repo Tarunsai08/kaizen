@@ -118,11 +118,18 @@ async function buildAll() {
   const people = await db.people.toArray();
   const inter = await db.interactions.toArray();
   for (const p of people) {
-    const last = inter.filter((i) => i.personId === p.id).map((i) => i.date).sort().pop() || p.since || today();
-    const [y, mo, d] = last.split('-').map(Number);
-    let at = new Date(y, mo - 1, d + (p.every || 7), 18, 30);
-    if (at.getTime() < Date.now()) { const n = new Date(); at = new Date(n.getFullYear(), n.getMonth(), n.getDate() + (n.getHours() >= 18 ? 1 : 0), 18, 30); }
-    push({ title: `Reach out to ${p.name}?`, body: p.notes ? p.notes.slice(0, 80) : 'A quick message counts.', extra: { kind: 'route', route: 'person', id: p.id }, schedule: { at, allowWhileIdle: true } });
+    const every = Math.max(1, p.every || 7);
+    const last = inter.filter((i) => i.personId === p.id).map((i) => i.date).sort().pop();
+    // never talked → due now (matches the People screen); otherwise last chat + frequency
+    let first;
+    if (last) { const [y, mo, d] = last.split('-').map(Number); first = new Date(y, mo - 1, d + every, 18, 30); }
+    else first = new Date(0);
+    if (first.getTime() < Date.now()) { const n = new Date(); first = new Date(n.getFullYear(), n.getMonth(), n.getDate() + (n.getHours() * 60 + n.getMinutes() >= 18 * 60 + 30 ? 1 : 0), 18, 30); }
+    // the due-day nudge plus two gentle follow-ups at the same rhythm, in case the app isn't opened
+    for (let k = 0; k < 3; k++) {
+      const at = new Date(first.getTime() + k * Math.min(every, 7) * 86400000);
+      push({ title: `Reach out to ${p.name}?`, body: k ? `It’s been a while — a quick message counts.` : p.notes ? p.notes.slice(0, 80) : 'A quick message counts.', extra: { kind: 'route', route: 'person', id: p.id }, schedule: { at, allowWhileIdle: true } });
+    }
   }
   // Study: one reminder per active subject per day (next 3 days), skipped today once the daily goal is met
   const subjects = (await db.subjects.toArray()).filter((s) => s.active !== false && s.reminder !== false);
