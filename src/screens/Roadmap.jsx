@@ -136,10 +136,11 @@ export function Roadmap({ sid, id }) {
         <div className="h2 mt-4" style={{ lineHeight: 1.2 }}>{id ? node.title : subject.long || subject.title}</div>
         {!id && subject.description && <p className="small dim clamp3" style={{ margin: '6px 0 0' }}>{subject.description}</p>}
         {node.summary && <p className="small dim" style={{ margin: '6px 0 0' }}>{node.summary}</p>}
-        <div className="row mt-12 gap-10">
+        <div className="rm-stats">
+          <Ring size={58} stroke={6} value={pct} color={color}><span className="num" style={{ fontWeight: 780, fontSize: 14 }}>{Math.round(pct * 100)}%</span></Ring>
           <div className="grow">
-            <div className="rm-bar"><i style={{ width: `${pct * 100}%`, background: color }} /></div>
-            <div className="row between mt-6 tiny muted"><span>{own.done} of {own.total} {own.total === 1 ? 'lesson' : 'lessons'}</span><span className="num">{Math.round(pct * 100)}%</span></div>
+            <div className="rm-stat-row"><b className="num">{own.done}</b><span>/ {own.total} {own.total === 1 ? 'lesson' : 'lessons'} done</span></div>
+            {!kids.every(isLeaf) && <div className="rm-stat-row"><b className="num">{tallies.filter((t) => t.done === t.total).length}</b><span>/ {n} {levelName.toLowerCase()}{n === 1 ? '' : 's'} complete</span></div>}
           </div>
           {(node.resources || []).length > 0 && <button className="btn sm" onClick={() => setResOpen(true)}><Link2 size={15} /> {node.resources.length}</button>}
         </div>
@@ -178,6 +179,7 @@ export function Roadmap({ sid, id }) {
             const shownFull = full && !(anim && anim.idx === i && anim.phase === 0);
             return (
               <React.Fragment key={k.id}>
+                {isCur && <span className="rm-halo" style={{ left: p.x - 60, top: p.y - 60 }} />}
                 <button
                   className={`rm-node ${shownFull ? 'done' : ''} ${isCur ? 'cur' : ''} ${pop ? 'pop' : ''} ${arriving ? 'arrive' : ''}`}
                   style={{ left: p.x - 36, top: p.y - 36 }}
@@ -197,6 +199,7 @@ export function Roadmap({ sid, id }) {
                   {isCur && !(anim && anim.phase < 3) && <span className="rm-bubble">{t.done === 0 ? (i === 0 && own.done === 0 ? 'START' : 'NEXT') : 'CONTINUE'}</span>}
                 </button>
                 <div className={`rm-label ${left ? 'l' : 'r'} ${full ? 'done' : ''} ${isCur ? 'cur' : ''}`} style={{ top: p.y - 34, maxWidth: Math.max(110, labelW), ...(left ? { right: W - p.x + 48 } : { left: p.x + 48 }) }} onClick={() => open(k)}>
+                  <div className="k">{String(i + 1).padStart(2, '0')}{full ? ' · done' : isCur ? ' · up next' : ''}</div>
                   <div className="t">{k.title}</div>
                   {!leaf && <div className="rm-mini"><i style={{ width: `${(t.done / Math.max(1, t.total)) * 100}%` }} /></div>}
                   <div className="s">
