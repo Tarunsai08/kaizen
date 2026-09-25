@@ -24,7 +24,12 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # The runner already has the Android SDK; only install what this app needs.
+      # (The default 'tools' package no longer exists, which made the old step fail.)
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          log-accepted-android-sdk-licenses: false
 
       - name: Install & build web app
         run: |
