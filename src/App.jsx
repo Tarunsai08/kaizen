@@ -15,7 +15,8 @@ import { today, nowHM } from './lib/date';
 import Today from './screens/Today';
 import { Habits, HabitForm, HabitDetail, Urge } from './screens/Habits';
 import { Body, Workout, ActivityForm, PresetForm, ScheduleEdit, Library, SleepLog, SleepStats, FitnessStats } from './screens/Fitness';
-import { Money, TxForm, MoneyInsights, Subscriptions, SmsImport, TagReview, AllTx } from './screens/Money';
+import { Money, TxForm, MoneyInsights, Subscriptions, SmsImport, TagReview, AllTx, importMessages } from './screens/Money';
+import { parseSms } from './lib/sms';
 import { Plan, TaskForm, GoalForm, GoalDetail, GoalReview, Projects } from './screens/Plan';
 import { Boredom, Sites, Hobbies, BoredStats } from './screens/Boredom';
 import { NightReview, Morning, JournalHistory, JournalDay, Insights, WeeklyReview, MoodStats } from './screens/Journal';
@@ -127,7 +128,17 @@ export default function App() {
     const check = async () => {
       try {
         const r = await SmsReader.getSharedText();
-        const m = r?.text && r.text.match(/https?:\/\/\S+/);
+        if (!r?.text) return;
+        // Bank SMS shared from Messages → transactions (several messages may come separated by blank lines)
+        const parts = r.text.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+        const txMsgs = parts.filter((x) => parseSms(x));
+        if (txMsgs.length) {
+          const n = await importMessages(txMsgs.map((body, i) => ({ body, date: Date.now() - i * 1000 })));
+          toast(n ? `Added ${n} transaction${n > 1 ? 's' : ''}` : 'Already added');
+          if (n) push('TagReview');
+          return;
+        }
+        const m = r.text.match(/https?:\/\/\S+/);
         if (m) {
           let name = r.subject || '';
           if (!name) { try { name = new URL(m[0]).hostname.replace(/^www\./, ''); } catch {} }

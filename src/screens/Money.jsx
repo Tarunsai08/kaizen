@@ -31,7 +31,7 @@ export async function syncSms({ quiet = true } = {}) {
   }
 }
 
-async function importMessages(msgs) {
+export async function importMessages(msgs) {
   const cats = await db.categories.where('kind').anyOf(['finance', 'income']).toArray();
   let added = 0;
   let maxTs = (await getKV('lastSmsTs', 0)) || 0;
@@ -61,7 +61,6 @@ export function Money() {
   const cats = useCats();
   const txs = useLiveQuery(() => db.transactions.toArray(), []);
   const subs = useLiveQuery(() => db.subscriptions.toArray(), []) || [];
-  useEffect(() => { syncSms().then((n) => n && toast(`${n} new transaction${n > 1 ? 's' : ''} from SMS`)); }, []);
   if (!txs) return <div className="screen" />;
   const cur = settings.currency;
   const [from, to] = periodRange(period);
@@ -297,15 +296,14 @@ export function SmsImport() {
     <div className="screen no-nav page-enter">
       <TopBar title="Import from bank SMS" />
       <div className="card small dim" style={{ lineHeight: 1.55 }}>
-        Every UPI payment — GPay, PhonePe, Paytm — triggers an SMS from your bank. Kaizen reads those alerts, so one source covers all apps. Nothing leaves your phone.
+        Every UPI payment — GPay, PhonePe, Paytm — triggers an SMS from your bank, so one source covers all apps. Nothing leaves your phone.
       </div>
       {platform === 'android' ? (
-        <>
-          <button className="btn primary lg block mt-16" onClick={scan} disabled={busy}><Smartphone size={18} /> {busy ? 'Scanning…' : 'Scan SMS inbox'}</button>
-          <div className="small muted center mt-8">New bank alerts are also picked up automatically when you open Money or the night review.</div>
-        </>
+        <div className="card flat mt-16 small dim" style={{ lineHeight: 1.6 }}>
+          <b style={{ color: 'var(--text)' }}>Fastest way:</b> in your Messages app, long-press a bank SMS → <b>Share</b> → <b>Kaizen</b>. It’s added instantly and waits for you to tag it. You can also select several messages and share them together.
+        </div>
       ) : (
-        <div className="small muted mt-12">Automatic SMS reading works in the Android app. In the browser you can paste messages below.</div>
+        <div className="small muted mt-12">In the Android app you can share bank SMS straight to Kaizen. Here, paste messages below.</div>
       )}
       <div className="section">
         <SectionHead title="Paste messages" />

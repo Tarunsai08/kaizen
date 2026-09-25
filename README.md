@@ -28,7 +28,7 @@ GitHub builds the APK for you.
 - Allow **notifications** when asked.
 - Open **Settings → Allow on-time reminders**.
 - **Poco / HyperOS only:** long-press the app icon → App info → turn **Autostart** ON, and set Battery saver to **No restrictions**. If you skip this, MIUI/HyperOS may delay reminders.
-- Open **Money → Bank SMS → Scan SMS inbox** and allow SMS access. The app reads only your bank alerts, and only on the phone. After this, new transactions come in automatically when you open Money or the night review.
+- **Adding bank transactions:** in Messages, long-press a bank SMS → **Share** → **Kaizen**. The app does not ask for SMS permission, because Google Play Protect blocks sideloaded apps that request it.
 - **Back up** now and then: **You → Settings → Backup**. This saves a .json file you can restore later.
 
 ### Fallback: use it as a web app
