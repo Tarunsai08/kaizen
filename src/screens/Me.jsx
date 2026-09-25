@@ -106,6 +106,17 @@ export function Settings() {
           <Seg value={settings.nightReviewLead} onChange={(v) => set('nightReviewLead', v)} options={[{ value: 15, label: '15m before' }, { value: 30, label: '30m' }, { value: 60, label: '1h' }]} />
         </Field>
         <Field label="Morning check-in reminder"><input type="time" className="input" value={settings.morningReminder} onChange={(e) => set('morningReminder', e.target.value)} /></Field>
+        <Field label="Sleep you need" hint="Used for sleep debt and the energy curve"><Seg value={settings.sleepNeed || 8} onChange={(v) => set('sleepNeed', v)} options={[6.5, 7, 7.5, 8, 8.5, 9].map((v) => ({ value: v, label: `${v}h` }))} /></Field>
+        <div className="grid-2">
+          <Field label="Usual workout time"><input type="time" className="input" value={settings.workoutTime || '18:00'} onChange={(e) => set('workoutTime', e.target.value)} /></Field>
+          <Field label="Daily step goal"><input className="input" inputMode="numeric" value={settings.stepGoal || 8000} onChange={(e) => set('stepGoal', Number(e.target.value.replace(/\D/g, '')) || 8000)} /></Field>
+        </div>
+        {isNative && (
+          <div className="card flat row between">
+            <div><div style={{ fontWeight: 600 }}>Health Connect</div><div className="small muted">{settings.healthConnect ? 'Steps & sleep sync automatically' : 'Not connected'}</div></div>
+            <button className="btn sm" onClick={async () => { const { hcConnect, hcOpenSettings } = await import('../lib/health'); if (settings.healthConnect) hcOpenSettings(); else { try { const ok = await hcConnect(); toast(ok ? 'Connected' : 'Not granted'); } catch { toast('Health Connect unavailable'); } } }}>{settings.healthConnect ? 'Manage' : 'Connect'}</button>
+          </div>
+        )}
 
         <div className="eyebrow mt-8">Notifications</div>
         <div className="card flat row between">

@@ -22,13 +22,13 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       # The runner already has the Android SDK; only install what this app needs.
       # (The default 'tools' package no longer exists, which made the old step fail.)
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
           log-accepted-android-sdk-licenses: false
 
       - name: Install & build web app
@@ -41,20 +41,28 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleStandardRelease assembleShieldRelease --no-daemon --stacktrace
 
-      - name: Rename APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk Kaizen-v${{ github.run_number }}.apk
+      - name: Rename APKs
+        run: |
+          cp android/app/build/outputs/apk/standard/release/app-standard-release.apk Kaizen-v${{ github.run_number }}.apk
+          cp android/app/build/outputs/apk/shield/release/app-shield-release.apk Kaizen-Shield-v${{ github.run_number }}.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: Kaizen-APK
-          path: Kaizen-v${{ github.run_number }}.apk
+          path: |
+            Kaizen-v${{ github.run_number }}.apk
+            Kaizen-Shield-v${{ github.run_number }}.apk
 
       # Publishes a GitHub Release so you can download the APK straight from your phone
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Kaizen v1.0.${{ github.run_number }}
-          files: Kaizen-v${{ github.run_number }}.apk
-          body: Open this page on your phone, tap the .apk to download, then install it.
+          tag_name: v2.0.${{ github.run_number }}
+          name: Kaizen v2.0.${{ github.run_number }}
+          files: |
+            Kaizen-v${{ github.run_number }}.apk
+            Kaizen-Shield-v${{ github.run_number }}.apk
+          body: |
+            **Kaizen-vN.apk** — the normal app. Install this one.
+            **Kaizen-Shield-vN.apk** — same app + Shorts/Reels blocking (needs Accessibility). Play Protect may block it; turn off "Scan apps with Play Protect" for a minute to install. Both editions share your data.

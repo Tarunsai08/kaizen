@@ -9,11 +9,35 @@ import { TopBar, Sheet, Field, Seg, Stepper, Toggle, DayPicker, ColorPicker, Emo
 import { Heatmap, Bars, HBars, WeekHourGrid, HourHist, Line } from '../ui/charts';
 import { HabitRow, BreakRow, SectionHead } from '../ui/rows';
 import { success, tap } from '../lib/native';
+import { HIcon, IconPicker } from '../ui/icons';
+import { SubTabs, useSub } from '../ui/kit';
+import { ScreenTimeView } from './ScreenTime';
+import { AREAS } from '../lib/xp';
 
 /* =========================================================
    HABITS TAB
    ========================================================= */
 export function Habits() {
+  const [view, setView] = useSub('habits', 'habits');
+  return (
+    <div className="screen fade-in">
+      <HabitsHeader />
+      <SubTabs value={view} onChange={setView} options={[['habits', 'Habits'], ['screen', 'Screen time']]} />
+      {view === 'habits' ? <HabitsList /> : <ScreenTimeView />}
+    </div>
+  );
+}
+function HabitsHeader() {
+  const { push } = useApp();
+  return (
+    <div className="titlebar">
+      <h1 className="h1">Habits</h1>
+      <button className="icon-btn" onClick={() => push('HabitForm', {})} aria-label="New habit"><Plus size={22} /></button>
+    </div>
+  );
+}
+
+function HabitsList() {
   const { push } = useApp();
   const [cat, setCat] = useState('all');
   const t = today();
@@ -26,7 +50,7 @@ export function Habits() {
     ]);
     return { habits, logs, urges, cats };
   }, [t]);
-  if (!data) return <div className="screen" />;
+  if (!data) return null;
   const { habits, logs, urges, cats } = data;
   const shown = habits.filter((h) => cat === 'all' || h.categoryId === cat);
   const build = shown.filter((h) => h.type === 'build');
@@ -44,12 +68,7 @@ export function Habits() {
   const usedCats = cats.filter((c) => habits.some((h) => h.categoryId === c.id));
 
   return (
-    <div className="screen fade-in">
-      <div className="row between" style={{ marginBottom: 16, marginTop: 4 }}>
-        <h1 className="h1">Habits</h1>
-        <button className="icon-btn" onClick={() => push('HabitForm', {})} aria-label="New habit"><Plus size={22} /></button>
-      </div>
-
+    <div>
       <div className="grid-2">
         <div className="card">
           <div className="eyebrow">Build · this week</div>
@@ -119,7 +138,7 @@ export function HabitForm({ id, type }) {
   useEffect(() => {
     (async () => {
       if (id) setH(await db.habits.get(id));
-      else setH({ ...BLANK, type: type || 'build', color: type === 'break' ? '#f87171' : '#4ade80', icon: type === 'break' ? '📵' : '✨' });
+      else setH({ ...BLANK, type: type || 'build', color: type === 'break' ? '#f87171' : '#4ade80', icon: type === 'break' ? 'i:Ban' : 'i:Sparkles' });
     })();
   }, [id]);
   if (!h) return <div className="screen no-nav" />;
@@ -139,14 +158,19 @@ export function HabitForm({ id, type }) {
     <div className="screen no-nav page-enter">
       <TopBar title={id ? 'Edit habit' : 'New habit'} right={<button className="btn sm primary" onClick={save}>Save</button>} />
       <div className="form">
-        {!id && <Seg value={h.type} onChange={(v) => set({ type: v, color: v === 'break' ? '#f87171' : '#4ade80', icon: v === 'break' ? '📵' : '✨' })} options={[{ value: 'build', label: 'Build' }, { value: 'break', label: 'Break' }]} />}
+        {!id && <Seg value={h.type} onChange={(v) => set({ type: v, color: v === 'break' ? '#f87171' : '#4ade80', icon: v === 'break' ? 'i:Ban' : 'i:Sparkles' })} options={[{ value: 'build', label: 'Build' }, { value: 'break', label: 'Break' }]} />}
         <div className="row gap-14">
-          <div className="swatch" style={{ width: 60, height: 60, fontSize: 28, borderRadius: 18, background: `color-mix(in srgb, ${h.color} 20%, transparent)` }}>{h.icon}</div>
+          <div className="swatch" style={{ width: 60, height: 60, fontSize: 28, borderRadius: 18, background: `color-mix(in srgb, ${h.color} 20%, transparent)` }}><HIcon icon={h.icon} size={28} color={h.color} /></div>
           <input className="input big grow" placeholder={isBuild ? 'Drink water' : 'Doomscrolling'} value={h.name} onChange={(e) => set({ name: e.target.value })} autoFocus={!id} />
         </div>
-        <Field label="Icon"><EmojiPicker value={h.icon} onChange={(v) => set({ icon: v })} /></Field>
+        <Field label="Icon"><IconPicker value={h.icon} onChange={(v) => set({ icon: v })} color={h.color} /></Field>
         <Field label="Color"><ColorPicker value={h.color} onChange={(v) => set({ color: v })} /></Field>
         <Field label="Category"><CategorySelect kind="habit" value={h.categoryId} onChange={(v) => set({ categoryId: v })} /></Field>
+        {isBuild && (
+          <Field label="Levels up" hint="Completing it earns XP in this life area">
+            <Chips value={h.area || null} onChange={(v) => set({ area: v })} options={[{ value: null, label: 'Auto' }, ...Object.entries(AREAS).map(([k, a]) => ({ value: k, label: a.label }))]} />
+          </Field>
+        )}
 
         {isBuild && (
           <>
@@ -163,6 +187,15 @@ export function HabitForm({ id, type }) {
           </>
         )}
 
+        {isBuild && (
+          <div className="card flat">
+            <div className="row between">
+              <div><div className="h3">Auto from steps</div><div className="small muted">Health Connect marks it done</div></div>
+              <Toggle on={!!h.autoSteps} onChange={(v) => set({ autoSteps: v, stepGoal: h.stepGoal || 8000 })} />
+            </div>
+            {h.autoSteps && <div className="mt-12"><Chips value={h.stepGoal || 8000} onChange={(v) => set({ stepGoal: v })} options={[5000, 6000, 8000, 10000, 12000].map((v) => ({ value: v, label: `${v / 1000}k steps` }))} /></div>}
+          </div>
+        )}
         <div className="card flat">
           <div className="row between">
             <div><div className="h3">Reminders</div><div className="small muted">Notifications in the Android app</div></div>
@@ -246,7 +279,7 @@ export function HabitDetail({ id }) {
     <div className="screen no-nav page-enter">
       <TopBar title="" right={menu} />
       <div className="row gap-14 mb-16">
-        <div className="swatch" style={{ width: 56, height: 56, fontSize: 26, borderRadius: 18, background: `color-mix(in srgb, ${h.color} 20%, transparent)` }}>{h.icon}</div>
+        <div className="swatch" style={{ width: 56, height: 56, fontSize: 26, borderRadius: 18, background: `color-mix(in srgb, ${h.color} 20%, transparent)` }}><HIcon icon={h.icon} size={26} color={h.color} /></div>
         <div className="grow">
           <h1 className="h2">{h.name}</h1>
           <div className="small muted">{h.type === 'build' ? describe(h) : 'Breaking this habit'}</div>
@@ -482,7 +515,7 @@ export function Urge({ habitId }) {
   return (
     <div className="timer-screen">
       <div className="row between">
-        <span className="eyebrow">{habit.icon} {habit.name}</span>
+        <span className="eyebrow row gap-6"><HIcon icon={habit.icon} size={14} color={habit.color} /> {habit.name}</span>
         <button className="icon-btn" onClick={pop} aria-label="Close"><X size={20} /></button>
       </div>
       {stage === 'trigger' && (
@@ -509,7 +542,8 @@ export function Urge({ habitId }) {
             <div className="grow small" style={{ textAlign: 'left' }}><span className="muted">Meanwhile, try:</span> <b>{suggestion}</b></div>
           </div>
           <div className="row" style={{ width: '100%' }}>
-            <button className="btn grow" onClick={() => push('Boredom', { fromUrge: true })}>Open boredom kit</button>
+            <button className="btn grow" onClick={() => push('Breathe', { pattern: 'sigh', minutes: 1 })}>Breathe</button>
+            <button className="btn grow" onClick={() => push('Boredom', { fromUrge: true })}>Boredom kit</button>
             <button className="btn grow" onClick={() => setStage('outcome')}>I’m done</button>
           </div>
         </div>

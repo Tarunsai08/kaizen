@@ -4,4 +4,12 @@
     <string name="title_activity_main">Kaizen</string>
     <string name="package_name">com.tarun.kaizen</string>
     <string name="custom_url_scheme">com.tarun.kaizen</string>
+    <string name="widget_day_desc">Day score, habits and tasks</string>
+    <string name="widget_mood_desc">Log your mood in one tap</string>
+    <string name="widget_actions_desc">Bored, breathe, focus, urge</string>
+    <string name="shield_desc">Kaizen Shield leaves YouTube Shorts and Instagram Reels feeds and shows a mindful pause before apps you choose. It only checks which app and screen is open — nothing is recorded or sent anywhere.</string>
+    <string name="shortcut_checkin">Check in</string>
+    <string name="shortcut_bored">I\'m bored</string>
+    <string name="shortcut_focus">Focus</string>
+    <string name="shortcut_expense">Add expense</string>
 </resources>

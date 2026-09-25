@@ -25,6 +25,20 @@ db.version(1).stores({
   hobbies: '++id',
 });
 
+// v2: companion, focus, people, mind tools, screen time
+db.version(2).stores({
+  focus: '++id, date, taskId',
+  people: '++id',
+  interactions: '++id, personId, date',
+  reframes: '++id, date',
+  wheels: '++id, &month',
+  intentions: '++id, &date',
+  breaths: '++id, date',
+  screenDays: '[date+pkg], date, pkg',
+  shieldEvents: '++id, date, pkg, type',
+  steps: '&date',
+});
+
 /* ---------- key/value settings ---------- */
 export async function getKV(key, fallback) {
   const row = await db.kv.get(key);
@@ -49,6 +63,16 @@ export const DEFAULT_SETTINGS = {
   emotions: ['calm', 'happy', 'motivated', 'grateful', 'focused', 'anxious', 'stressed', 'tired', 'lonely', 'irritated', 'sad', 'bored'],
   siteTags: ['Fun', 'Learning', 'Creative'],
   lastRecurCheck: '',
+  onboarded: false,
+  companionName: 'Kai',
+  sleepNeed: 8,
+  freezes: 1,
+  frozenDays: [],
+  freezeProgress: '',
+  lastLevel: 1,
+  healthConnect: false,
+  shield: { shorts: { youtube: true, instagram: true, facebook: false, snapchat: false }, pauseApps: [], pauseSeconds: 6, allowMinutes: 10, enabled: false },
+  screenLimits: {},
 };
 
 /* ---------- seed on first run ---------- */

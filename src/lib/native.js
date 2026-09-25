@@ -19,16 +19,16 @@ export function success() {
   } catch {}
 }
 
-/* Custom native plugin (android/app/src/main/java/.../SmsReaderPlugin.java) */
-export const SmsReader = registerPlugin('SmsReader');
-
-export async function readBankSms(sinceTs) {
-  if (platform !== 'android') throw new Error('SMS import works in the Android app only');
-  const perm = await SmsReader.requestPermissions();
-  if (perm.sms !== 'granted') throw new Error('SMS permission was not granted');
-  const res = await SmsReader.read({ since: sinceTs || 0, limit: 500 });
-  return res.messages || [];
+/* Custom native plugin (android/app/src/main/java/com/tarun/kaizen/KaizenPlugin.java):
+   shared text, launch actions (widgets/shortcuts), screen time, Shield, widgets. */
+export const Kaizen = registerPlugin('Kaizen');
+export const SmsReader = Kaizen; // backwards name
+export const isAndroid = platform === 'android';
+export async function safe(fn, fallback = null) {
+  if (!isAndroid) return fallback;
+  try { return await fn(); } catch (e) { console.warn(e); return fallback; }
 }
+
 
 export function openUrl(url) {
   window.open(url, '_blank', 'noopener');

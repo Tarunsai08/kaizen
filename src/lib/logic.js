@@ -13,8 +13,14 @@ export function habitActiveOn(h, date) {
   if (h.endDate && date > h.endDate) return false;
   return true;
 }
+// Days protected by a streak freeze / rest day: habits aren't due, so streaks survive.
+let FROZEN = new Set();
+export const setFrozenDays = (arr) => { FROZEN = new Set(arr || []); };
+export const isFrozen = (d) => FROZEN.has(d);
+
 export function habitDueOn(h, date) {
   if (!habitActiveOn(h, date)) return false;
+  if (FROZEN.has(date) && h.freq !== 'weekly') return false;
   if (h.freq === 'weekly') return true;
   return (h.days && h.days.length ? h.days : ALL_DAYS).includes(dow(date));
 }

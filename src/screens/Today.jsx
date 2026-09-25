@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Sparkles, Moon, Sunrise, Wind, ChevronRight, Dumbbell, User, Wallet, Smile, CheckSquare, Flame, Repeat2 } from 'lucide-react';
+import { Plus, Sparkles, Moon, Sunrise, Wind, ChevronRight, Dumbbell, User, Wallet, Smile, CheckSquare, Flame, Repeat2, Timer, Zap, Quote, Snowflake, Phone } from 'lucide-react';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
 import { today, greeting, dow, fmtHM, hmToMin, addDays, lastNDays, weekStart, DAYS_SHORT, MONTHS, parse } from '../lib/date';
@@ -8,6 +8,13 @@ import { computeDay, habitDueOn, checkinDueToday, money, sumByDate } from '../li
 import { MultiRing, MoodScale, Sheet, TagSelect, Scale5, MOODS } from '../ui/kit';
 import { HabitRow, BreakRow, TaskRow, GoalCard, SectionHead } from '../ui/rows';
 import { success } from '../lib/native';
+import { momentumUntil, stageFor } from '../lib/xp';
+import { dayItems, nowNext } from '../lib/day';
+import { HIcon } from '../ui/icons';
+import Companion from '../ui/Companion';
+import { useXP, companionMood } from './You';
+import { useEnergy } from './Health';
+import { personStatus, Avatar } from './People';
 
 export default function Today() {
   const { push, settings, toast, goTab } = useApp();
@@ -16,7 +23,7 @@ export default function Today() {
   const [moodSheet, setMoodSheet] = useState(null);
 
   const data = useLiveQuery(async () => {
-    const [habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects] = await Promise.all([
+    const [habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, intention, people, inter] = await Promise.all([
       db.habits.filter((h) => !h.archived).toArray(),
       db.habitLogs.where('date').between(addDays(t, -7), t, true, true).toArray(),
       db.urges.toArray(),
@@ -30,10 +37,16 @@ export default function Today() {
       db.transactions.where('tagged').equals(0).count(),
       db.workouts.where('date').equals(t).toArray(),
       db.projects.toArray(),
+      db.intentions.where('date').equals(t).first(),
+      db.people.toArray(),
+      db.interactions.toArray(),
     ]);
     const day = await computeDay(t, settings);
-    return { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day };
-  }, [t, settings.schedule]);
+    const timeline = await dayItems(t, settings);
+    return { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day, intention, people, inter, timeline };
+  }, [t, settings.schedule, settings.frozenDays?.length]);
+  const xp = useXP();
+  const energy = useEnergy();
 
   // momentum: consecutive days with score >= 60
   const scores = settings.scores || {};
@@ -48,10 +61,14 @@ export default function Today() {
   }, [data?.day.score]);
 
   if (!data) return <div className="screen" />;
-  const { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day } = data;
+  const { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day, intention, people, inter, timeline } = data;
 
-  let momentum = 0;
-  for (let d = (scores[t] ?? day.score) >= 60 ? t : addDays(t, -1); (d === t ? day.score : scores[d]) >= 60; d = addDays(d, -1)) momentum++;
+  const frozen = settings.frozenDays || [];
+  const sc = { ...scores, [t]: day.score };
+  const momentum = momentumUntil(sc, frozen, t) || momentumUntil(sc, frozen, addDays(t, -1));
+  const restDay = frozen.includes(t);
+  const duePeople = people.map((p) => ({ p, s: personStatus(p, inter) })).filter((x) => x.s.due);
+  const nn = nowNext(timeline.items);
 
   const build = habits.filter((h) => h.type === 'build' && habitDueOn(h, t));
   const breaks = habits.filter((h) => h.type === 'break');
@@ -87,7 +104,10 @@ export default function Today() {
           <div className="eyebrow">{DAYS_SHORT[d.getDay()]} · {d.getDate()} {MONTHS[d.getMonth()]}</div>
           <h1 className="h1 mt-4">{greeting()}{settings.name ? `, ${settings.name}` : ''}</h1>
         </div>
-        <button className="icon-btn" onClick={() => push('Me')} aria-label="You"><User size={20} /></button>
+        <button onClick={() => push('You')} aria-label="You" style={{ position: 'relative', width: 52, height: 52, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+          <div style={{ marginTop: 6 }}><Companion stage={xp ? stageFor(xp.total.level).index : 0} mood={companionMood(day.score)} size={44} /></div>
+          {xp && <span style={{ position: 'absolute', right: 3, top: 3, minWidth: 17, height: 17, borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 10, fontWeight: 800, display: 'grid', placeItems: 'center', padding: '0 4px' }}>{xp.total.level}</span>}
+        </button>
       </div>
 
       {/* Day score */}
@@ -98,10 +118,11 @@ export default function Today() {
             <MultiRing rings={day.rings.map((r) => ({ value: r.value ?? 0, color: r.value == null ? 'var(--faint)' : r.color }))} size={128} stroke={10} gap={3} />
           </div>
           <div className="grow">
-            <div className="eyebrow">Day score</div>
+            <div className="eyebrow">Day score{xp?.today ? <span style={{ color: 'var(--accent)' }}> · +{xp.today} XP</span> : null}</div>
             <div className="row gap-6" style={{ alignItems: 'baseline' }}>
               <span className="big-num num" style={{ fontSize: 44 }}>{day.score}</span>
               {momentum > 1 && <span className="badge" style={{ color: 'var(--fit)' }}><Flame size={12} />{momentum}d</span>}
+              {restDay && <span className="badge" style={{ color: '#7dd3fc' }}><Snowflake size={12} />rest</span>}
             </div>
             <div className="col gap-4 mt-8">
               {day.rings.map((r) => (
@@ -115,6 +136,35 @@ export default function Today() {
           </div>
         </div>
       </div>
+
+      {/* Intention */}
+      {intention?.text && (
+        <div className="card mt-12 row gap-12">
+          <Quote size={18} color="var(--accent)" style={{ flexShrink: 0 }} />
+          <div className="grow"><div className="tiny muted">Today’s intention</div><div style={{ fontWeight: 620 }}>{intention.text}</div></div>
+        </div>
+      )}
+
+      {/* Now / Next (timeline) + energy */}
+      <button className="card card-press mt-12" style={{ width: '100%', textAlign: 'left', padding: 0 }} onClick={() => goTab('plan')}>
+        {energy && (
+          <div className="row gap-10" style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
+            <Zap size={16} color="var(--accent)" />
+            <span className="small grow"><b>{energy.zone.label}</b>{energy.zone.untilLabel ? <span className="muted"> · until {energy.zone.untilLabel}</span> : null}</span>
+            <span className="tiny muted ellipsis" style={{ maxWidth: '45%' }}>{energy.zone.tip}</span>
+          </div>
+        )}
+        {[...(nn.cur ? [{ ...nn.cur, label: 'Now' }] : []), ...nn.next.map((x, i) => ({ ...x, label: i === 0 && !nn.cur ? 'Next' : 'Then' }))].map((it) => (
+          <div key={it.key} className="row gap-12" style={{ padding: '11px 16px' }}>
+            <div className="tile sm" style={{ background: `color-mix(in srgb, ${it.color} 18%, transparent)` }}><HIcon icon={it.icon} size={16} color={it.color} /></div>
+            <div className="grow" style={{ minWidth: 0 }}>
+              <div className="tiny muted">{it.label} · {fmtHM(it.start)}</div>
+              <div className="ellipsis" style={{ fontWeight: 600 }}>{it.title}</div>
+            </div>
+          </div>
+        ))}
+        {!nn.cur && !nn.next.length && <div className="small muted" style={{ padding: '12px 16px' }}>Nothing else planned today. Enjoy the space.</div>}
+      </button>
 
       {/* Contextual prompts */}
       {showMorning && (
@@ -151,7 +201,7 @@ export default function Today() {
 
       {/* Mood */}
       <div className="section">
-        <SectionHead title="How are you feeling?" link={lastMood ? `Last: ${MOODS[lastMood.mood - 1].e}` : 'History'} onLink={() => push('MoodStats')} />
+        <SectionHead title="How are you feeling?" link="More precise" onLink={() => push('MoodCheckin')} />
         <div className="card"><MoodScale value={null} onChange={quickMood} /></div>
       </div>
 
@@ -192,6 +242,13 @@ export default function Today() {
         <SectionHead title="Tasks" link="Plan" onLink={() => goTab('plan')} />
         <div className="list">
           {todayTasks.map((x) => <TaskRow key={x.id} t={x} showDate={x.due !== t} projects={projects} goals={goals} />)}
+          {duePeople.map(({ p, s }) => (
+            <button key={'p' + p.id} className="list-item" onClick={() => push('PersonDetail', { id: p.id })}>
+              <Avatar p={p} size={26} />
+              <div className="grow"><div style={{ fontWeight: 540 }}>Reach out to {p.name}</div><div className="tiny muted">{s.since == null ? 'Say hi' : `${s.since} days since you talked`}</div></div>
+              <Phone size={15} className="muted" />
+            </button>
+          ))}
           <button className="list-item muted" onClick={() => push('TaskForm', { due: t })}>
             <Plus size={18} /> <span className="small" style={{ fontWeight: 550 }}>{todayTasks.length ? 'Add task' : 'Nothing due today — add a task'}</span>
           </button>
@@ -223,12 +280,12 @@ export default function Today() {
       <Sheet open={fab} onClose={() => setFab(false)} title="Quick add">
         <div className="grid-3">
           {[
-            { l: 'Mood', i: Smile, c: 'var(--mood)', a: () => push('MoodStats', { log: true }) },
+            { l: 'Check in', i: Smile, c: 'var(--mood)', a: () => push('MoodCheckin') },
             { l: 'Task', i: CheckSquare, c: 'var(--task)', a: () => push('TaskForm', { due: t }) },
             { l: 'Expense', i: Wallet, c: 'var(--money)', a: () => push('TxForm', {}) },
+            { l: 'Focus', i: Timer, c: 'var(--bored)', a: () => push('Focus', {}) },
+            { l: 'Breathe', i: Wind, c: 'var(--bored)', a: () => push('Breathe', {}) },
             { l: 'Urge', i: Flame, c: 'var(--break)', a: () => goTab('habits') },
-            { l: 'Bored', i: Wind, c: 'var(--bored)', a: () => push('Boredom') },
-            { l: 'Habit', i: Repeat2, c: 'var(--habit)', a: () => push('HabitForm', {}) },
             { l: 'Workout', i: Dumbbell, c: 'var(--fit)', a: () => push('Workout', { date: t }) },
             { l: 'Sleep', i: Moon, c: 'var(--sleep)', a: () => push('SleepLog', {}) },
             { l: 'Journal', i: Sparkles, c: 'var(--goal)', a: () => push('NightReview') },
