@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="checkin" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_checkin">
+        <intent android:action="android.intent.action.VIEW" android:data="kaizen://checkin"
+            android:targetPackage="com.tarun.kaizen" android:targetClass="com.tarun.kaizen.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="bored" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_bored">
+        <intent android:action="android.intent.action.VIEW" android:data="kaizen://bored"
+            android:targetPackage="com.tarun.kaizen" android:targetClass="com.tarun.kaizen.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="focus" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_focus">
+        <intent android:action="android.intent.action.VIEW" android:data="kaizen://focus"
+            android:targetPackage="com.tarun.kaizen" android:targetClass="com.tarun.kaizen.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="expense" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_expense">
+        <intent android:action="android.intent.action.VIEW" android:data="kaizen://expense"
+            android:targetPackage="com.tarun.kaizen" android:targetClass="com.tarun.kaizen.MainActivity" />
+    </shortcut>
+</shortcuts>

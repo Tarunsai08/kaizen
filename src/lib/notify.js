@@ -114,6 +114,16 @@ async function buildAll() {
       schedule: { on: { weekday: Number(d) + 1, ...HM(t) }, allowWhileIdle: true },
     });
   }
+  // Keep-in-touch nudges: one on the day each person becomes due
+  const people = await db.people.toArray();
+  const inter = await db.interactions.toArray();
+  for (const p of people) {
+    const last = inter.filter((i) => i.personId === p.id).map((i) => i.date).sort().pop() || p.since || today();
+    const [y, mo, d] = last.split('-').map(Number);
+    let at = new Date(y, mo - 1, d + (p.every || 7), 18, 30);
+    if (at.getTime() < Date.now()) { const n = new Date(); at = new Date(n.getFullYear(), n.getMonth(), n.getDate() + (n.getHours() >= 18 ? 1 : 0), 18, 30); }
+    push({ title: `Reach out to ${p.name}?`, body: p.notes ? p.notes.slice(0, 80) : 'A quick message counts.', extra: { kind: 'route', route: 'person', id: p.id }, schedule: { at, allowWhileIdle: true } });
+  }
   return out;
 }
 

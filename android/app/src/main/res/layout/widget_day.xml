@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="DAY SCORE" android:textColor="#FF7A7A85" android:textSize="11sp" android:letterSpacing="0.08" android:textStyle="bold" />
+    <TextView android:id="@+id/w_score" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="0" android:textColor="#FFF4F4F6" android:textSize="40sp" android:textStyle="bold" />
+    <ProgressBar android:id="@+id/w_progress" style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent" android:layout_height="6dp" android:layout_marginTop="6dp"
+        android:max="100" android:progress="0" android:progressDrawable="@drawable/widget_progress" />
+    <TextView android:id="@+id/w_habits" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" android:text="Habits 0/0" android:textColor="#FFB1B1BA" android:textSize="13sp" />
+    <TextView android:id="@+id/w_level" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="2dp" android:text="Kai · Lv 1" android:textColor="#FFC8F35A" android:textSize="12sp" />
+</LinearLayout>

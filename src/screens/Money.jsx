@@ -6,30 +6,14 @@ import { useApp } from '../ctx';
 import { today, periodRange, prevPeriodRange, buckets, fmtDay, fmtTime, ymd, periodLabel, addDays } from '../lib/date';
 import { money, moneyShort, detectSubscriptions, monthlyCost, nextRenewal, normMerchant } from '../lib/logic';
 import { parseSms, smsKey, guessCategory } from '../lib/sms';
-import { readBankSms, platform, success, tap } from '../lib/native';
+import { platform, success, tap } from '../lib/native';
 import { TopBar, Seg, Field, Sheet, Chips, PeriodToggle, Stat, Empty, Confirm, CategorySelect, Toggle } from '../ui/kit';
 import { Bars, HBars, Donut } from '../ui/charts';
 import { SectionHead } from '../ui/rows';
 
 const useCats = () => useLiveQuery(() => db.categories.where('kind').anyOf(['finance', 'income']).toArray(), []) || [];
 
-/* Auto-import new bank SMS (Android only, silent when permission already granted) */
-export async function syncSms({ quiet = true } = {}) {
-  if (platform !== 'android') return 0;
-  try {
-    const { SmsReader } = await import('../lib/native');
-    if (quiet) {
-      const p = await SmsReader.checkPermissions();
-      if (p.sms !== 'granted') return 0;
-    }
-    const since = (await getKV('lastSmsTs', 0)) || Date.now() - 30 * 86400000;
-    const msgs = await readBankSms(since);
-    return await importMessages(msgs);
-  } catch (e) {
-    if (!quiet) throw e;
-    return 0;
-  }
-}
+export async function syncSms() { return 0; } // SMS inbox reading removed (Play Protect); kept for compatibility
 
 export async function importMessages(msgs) {
   const cats = await db.categories.where('kind').anyOf(['finance', 'income']).toArray();
@@ -276,16 +260,7 @@ export function TagReview() {
 export function SmsImport() {
   const { toast, pop } = useApp();
   const [txt, setTxt] = useState('');
-  const [busy, setBusy] = useState(false);
   const parsed = useMemo(() => txt.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean).map((b) => ({ body: b, p: parseSms(b, Date.now()) })), [txt]);
-  const scan = async () => {
-    setBusy(true);
-    try {
-      const n = await syncSms({ quiet: false });
-      toast(n ? `Imported ${n} transaction${n > 1 ? 's' : ''}` : 'No new bank transactions');
-    } catch (e) { toast(e.message || 'Could not read SMS'); }
-    setBusy(false);
-  };
   const importPasted = async () => {
     const msgs = parsed.filter((x) => x.p).map((x, i) => ({ body: x.body, date: Date.now() - i * 1000 }));
     const n = await importMessages(msgs);

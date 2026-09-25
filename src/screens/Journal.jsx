@@ -113,7 +113,7 @@ export function NightReview() {
   return <LockGate><NightReviewInner /></LockGate>;
 }
 function NightReviewInner() {
-  const { pop, settings, toast, celebrate } = useApp();
+  const { pop, push, settings, toast, celebrate } = useApp();
   const t = today();
   const [step, setStep] = useState(0);
   const [quick, setQuick] = useState(false);
@@ -121,6 +121,7 @@ function NightReviewInner() {
   const [j, setJ] = useState(null);
   const [prios, setPrios] = useState(['', '', '']);
   const untagged = useLiveQuery(() => db.transactions.where('tagged').equals(0).count(), []) ?? 0;
+  const intention = useLiveQuery(() => db.intentions.where('date').equals(t).first(), [t]);
   useEffect(() => {
     (async () => {
       syncSms();
@@ -187,6 +188,16 @@ function NightReviewInner() {
             <Scale5 value={j.energy} onChange={(v) => set({ energy: v })} color="var(--goal)" labels={['Drained', 'Charged']} />
             <div className="label mt-8">Stress</div>
             <Scale5 value={j.stress} onChange={(v) => set({ stress: v })} color="var(--break)" labels={['Calm', 'Overwhelmed']} />
+            {intention?.text && (
+              <>
+                <div className="label mt-8">Did you live your intention? <span className="muted">“{intention.text}”</span></div>
+                <div className="grid-3">
+                  {[['yes', 'Yes'], ['partly', 'Partly'], ['no', 'Not really']].map(([k, l]) => (
+                    <button key={k} className="btn" style={intention.result === k ? { background: 'var(--text)', color: 'var(--bg)' } : null} onClick={() => { tap(); db.intentions.update(intention.id, { result: k }); }}>{l}</button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="label mt-8">Feelings</div>
             <TagSelect options={settings.emotions} value={j.tags || []} onChange={(v) => set({ tags: v })} multi onAdd={(e) => setKV('emotions', [...settings.emotions, e])} />
           </>
@@ -196,7 +207,10 @@ function NightReviewInner() {
             <h1 className="h1">Reflect</h1>
             <p className="small muted" style={{ margin: 0 }}>All optional. A few words is enough.</p>
             {[['wentWell', 'What went well today?'], ['notWell', 'What didn’t go well?'], ['grateful', 'One thing I’m grateful for'], ['differently', 'One thing I’ll do differently tomorrow']].map(([k, q]) => (
-              <Field key={k} label={q}><textarea className="textarea" style={{ minHeight: 64 }} value={j[k]} onChange={(e) => set({ [k]: e.target.value })} /></Field>
+              <Field key={k} label={q}>
+                <textarea className="textarea" style={{ minHeight: 64 }} value={j[k]} onChange={(e) => set({ [k]: e.target.value })} />
+                {k === 'notWell' && j.notWell.trim().length > 12 && <button className="btn sm ghost" style={{ alignSelf: 'flex-start', color: 'var(--task)' }} onClick={() => push('Reframe', { thought: j.notWell })}>Feeling heavy? Reframe this thought →</button>}
+              </Field>
             ))}
             <Field label={j.promptQ}><textarea className="textarea" style={{ minHeight: 64 }} value={j.promptA} onChange={(e) => set({ promptA: e.target.value })} /></Field>
             <Field label="Anything else"><textarea className="textarea" value={j.free} onChange={(e) => set({ free: e.target.value })} /></Field>
@@ -245,6 +259,7 @@ export function Morning() {
   const [wake, setWake] = useState(nowHM());
   const [quality, setQuality] = useState(null);
   const [mood, setMood] = useState(null);
+  const [intent, setIntent] = useState('');
   const [saved, setSaved] = useState(false);
   const data = useLiveQuery(async () => ({
     sleep: await db.sleep.where('date').equals(t).first(),
@@ -261,6 +276,7 @@ export function Morning() {
     if (data.sleep) await db.sleep.update(data.sleep.id, { wakeTs: w.getTime(), quality });
     else await db.sleep.add({ date: t, bedTs: null, wakeTs: w.getTime(), quality });
     if (mood) await db.moods.add({ date: t, ts: Date.now(), mood, tags: [], kind: 'morning' });
+    if (intent.trim()) await db.intentions.put({ ...(await db.intentions.where('date').equals(t).first()), date: t, text: intent.trim() });
     success(); setSaved(true);
   };
   const dur = data.sleep?.bedTs ? (() => { const [h, m] = wake.split(':').map(Number); const w = new Date(); w.setHours(h, m, 0, 0); return (w.getTime() - data.sleep.bedTs) / 60000; })() : null;
@@ -276,6 +292,10 @@ export function Morning() {
             {dur != null && dur > 0 && dur < 1200 && <div className="small muted">≈ {fmtDur(dur)} of sleep since {fmtTime(data.sleep.bedTs)}</div>}
             <Field label="Sleep quality"><Scale5 value={quality} onChange={setQuality} color="var(--sleep)" labels={['Terrible', 'Great']} /></Field>
             <Field label="Mood on waking"><MoodScale value={mood} onChange={setMood} /></Field>
+            <Field label="Today I want to…" hint="One intention. The night review will ask how it went.">
+              <input className="input" value={intent} onChange={(e) => setIntent(e.target.value)} placeholder="be present, finish the report, move my body…" />
+              <div className="chips mt-8">{['Be patient', 'Focus deeply', 'Move my body', 'Be kind to myself', 'Say no to distractions', 'Listen more'].map((x) => <button key={x} className="chip" onClick={() => setIntent(x)}>{x}</button>)}</div>
+            </Field>
             <button className="btn primary lg block" onClick={save} disabled={!quality}>Save</button>
           </div>
         </>

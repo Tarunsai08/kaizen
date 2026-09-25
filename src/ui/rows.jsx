@@ -6,6 +6,7 @@ import { tap, success } from '../lib/native';
 import { today, fmtDay, lastNDays, fmtHM, weekStart } from '../lib/date';
 import { completeTask, sumByDate, breakStats, goalProgress, timeLeft, habitDueOn } from '../lib/logic';
 import { Ring, Bar } from './kit';
+import { HIcon } from './icons';
 
 /* ---------- Build habit row with one-tap logging ---------- */
 export function HabitRow({ h, logs, date = today(), weekDots = true }) {
@@ -46,7 +47,7 @@ export function HabitRow({ h, logs, date = today(), weekDots = true }) {
   return (
     <div className={`habit card-press ${done ? 'done' : ''}`} onClick={() => push('HabitDetail', { id: h.id })}>
       <div className="habit-fill" style={{ background: color, transform: `scaleX(${Math.min(1, amt / target)})` }} />
-      <div className="ico" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)` }}>{h.icon || '•'}</div>
+      <div className="ico" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)` }}><HIcon icon={h.icon} size={21} color={color} /></div>
       <div className="grow">
         <div className="name ellipsis">{h.name}</div>
         <div className="row gap-6 mt-4">
@@ -87,7 +88,7 @@ export function BreakRow({ h, urges }) {
   const color = h.color || 'var(--break)';
   return (
     <div className="habit card-press" onClick={() => push('HabitDetail', { id: h.id })}>
-      <div className="ico" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)` }}>{h.icon || '•'}</div>
+      <div className="ico" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)` }}><HIcon icon={h.icon} size={21} color={color} /></div>
       <div className="grow">
         <div className="name ellipsis">{h.name}</div>
         <div className="small muted mt-4">

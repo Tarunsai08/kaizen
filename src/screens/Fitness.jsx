@@ -30,7 +30,7 @@ export function Body() {
   );
 }
 
-function MoveView() {
+export function MoveView() {
   const { push, settings } = useApp();
   const t = today();
   const ws = weekStart();
@@ -51,7 +51,7 @@ function MoveView() {
   const plannedThisWeek = weekDays.filter((d) => (sched[dow(d)] || []).length).length;
 
   return (
-    <div className="mt-16">
+    <div>
       <button className="hero card-press" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('Workout', { date: t })}>
         <div className="glow" style={{ background: 'var(--fit)', right: -90, top: -100 }} />
         <div className="eyebrow">Today · {DAYS_SHORT[dow(t)]}</div>
@@ -566,7 +566,7 @@ export function FitnessStats() {
 /* =========================================================
    SLEEP
    ========================================================= */
-function SleepView() {
+export function SleepView() {
   const { push, settings } = useApp();
   const rows = useLiveQuery(() => db.sleep.where('date').aboveOrEqual(addDays(today(), -30)).toArray(), []) || [];
   const last = [...rows].sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -575,7 +575,7 @@ function SleepView() {
   const avgDur = avg(week.map(sleepMinutes).filter((x) => x != null));
   const bars = lastNDays(7).map((d) => { const r = rows.find((x) => x.date === d); return { label: DAYS_SHORT[dow(d)][0], value: r ? Math.round((sleepMinutes(r) || 0) / 6) / 10 : 0 }; });
   return (
-    <div className="mt-16">
+    <div>
       <div className="hero">
         <div className="glow" style={{ background: 'var(--sleep)', right: -80, top: -90 }} />
         <div className="eyebrow">Last night</div>

@@ -130,6 +130,7 @@ export function Boredom() {
           <div className="grid-2 mt-24">
             {[null, 10, 20, 30].map((m) => <button key={m ?? 'open'} className="card card-press center" style={{ padding: 22 }} onClick={() => startStay(m)}><div className="h2">{m ? `${m} min` : '∞'}</div><div className="small muted">{m ? 'timer' : 'open-ended'}</div></button>)}
           </div>
+          <button className="btn block mt-12" onClick={() => push('Breathe', {})}>Or do a guided breathing exercise</button>
           <button className="btn ghost block mt-16" onClick={() => setStage('choose')}>Back</button>
         </>
       )}

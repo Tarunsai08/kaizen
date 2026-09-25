@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_bg" android:orientation="vertical" android:padding="12dp">
+    <TextView android:id="@+id/w_mood_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="How are you feeling?" android:textColor="#FFF4F4F6" android:textSize="14sp" android:textStyle="bold" android:paddingBottom="8dp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:id="@+id/w_m1" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+            android:layout_marginStart="0dp" android:background="@drawable/widget_chip" android:gravity="center" android:text="😣" android:textSize="24sp" />
+        <TextView android:id="@+id/w_m2" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+            android:layout_marginStart="4dp" android:background="@drawable/widget_chip" android:gravity="center" android:text="😔" android:textSize="24sp" />
+        <TextView android:id="@+id/w_m3" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+            android:layout_marginStart="4dp" android:background="@drawable/widget_chip" android:gravity="center" android:text="😐" android:textSize="24sp" />
+        <TextView android:id="@+id/w_m4" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+            android:layout_marginStart="4dp" android:background="@drawable/widget_chip" android:gravity="center" android:text="🙂" android:textSize="24sp" />
+        <TextView android:id="@+id/w_m5" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+            android:layout_marginStart="4dp" android:background="@drawable/widget_chip" android:gravity="center" android:text="😊" android:textSize="24sp" />
+    </LinearLayout>
+</LinearLayout>

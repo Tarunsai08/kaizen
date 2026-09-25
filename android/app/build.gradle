@@ -4,19 +4,19 @@ apply plugin: 'com.android.application'
 def kaizenBuildNumber = Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1")
 
 android {
-    namespace "com.tarun.kaizen"
-    compileSdk rootProject.ext.compileSdkVersion
+    namespace = "com.tarun.kaizen"
+    compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.tarun.kaizen"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode kaizenBuildNumber
-        versionName "1.0.${kaizenBuildNumber}"
+        versionName "2.0.${kaizenBuildNumber}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
     // Fixed signing key so every new build installs as an UPDATE (your data is kept).
@@ -29,6 +29,20 @@ android {
             keyPassword "kaizen-local-2026"
         }
     }
+
+    // Two variants of the same app (same id + key, so you can switch without losing data):
+    //  standard -> everything except Shorts/Reels blocking (installs without Play Protect warnings)
+    //  shield   -> adds the Accessibility-based Shield (Play Protect may block sideloading it)
+    buildFeatures {
+        buildConfig = true
+    }
+
+    flavorDimensions = ["edition"]
+    productFlavors {
+        standard { dimension "edition" }
+        shield { dimension "edition" }
+    }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.kaizen

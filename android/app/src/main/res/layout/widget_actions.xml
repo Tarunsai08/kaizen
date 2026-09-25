@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_bg" android:orientation="horizontal" android:padding="10dp">
+    <LinearLayout android:id="@+id/w_a_bored" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_marginStart="0dp" android:background="@drawable/widget_chip" android:gravity="center" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎈" android:textSize="20sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bored" android:textColor="#FFB1B1BA" android:textSize="11sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_a_breathe" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_marginStart="6dp" android:background="@drawable/widget_chip" android:gravity="center" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌬️" android:textSize="20sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Breathe" android:textColor="#FFB1B1BA" android:textSize="11sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_a_focus" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_marginStart="6dp" android:background="@drawable/widget_chip" android:gravity="center" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏱️" android:textSize="20sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Focus" android:textColor="#FFB1B1BA" android:textSize="11sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_a_urge" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_marginStart="6dp" android:background="@drawable/widget_chip" android:gravity="center" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🛡️" android:textSize="20sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Urge" android:textColor="#FFB1B1BA" android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>

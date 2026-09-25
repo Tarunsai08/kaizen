@@ -9,19 +9,20 @@ import { TopBar, Seg, Field, Sheet, Chips, Stepper, Toggle, CategorySelect, Peri
 import { Bars, HBars, Line } from '../ui/charts';
 import { TaskRow, GoalCard, SectionHead, GOAL_TYPE_COLOR } from '../ui/rows';
 import { success, tap } from '../lib/native';
+import { SubTabs, useSub } from '../ui/kit';
+import { DayView } from './Day';
+import { PeopleView } from './People';
 
 /* =========================================================
    PLAN TAB (Tasks + Goals)
    ========================================================= */
 export function Plan() {
-  const [view, setView] = useState('tasks');
+  const [view, setView] = useSub('plan', 'day');
   return (
     <div className="screen fade-in">
-      <div className="row between" style={{ marginBottom: 16, marginTop: 4 }}>
-        <h1 className="h1">Plan</h1>
-      </div>
-      <Seg value={view} onChange={setView} options={[{ value: 'tasks', label: 'Tasks' }, { value: 'goals', label: 'Goals' }]} />
-      {view === 'tasks' ? <TasksView /> : <GoalsView />}
+      <div className="titlebar"><h1 className="h1">Plan</h1></div>
+      <SubTabs value={view} onChange={setView} options={[['day', 'Day'], ['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
+      {view === 'day' ? <DayView /> : view === 'tasks' ? <TasksView /> : view === 'goals' ? <GoalsView /> : <PeopleView />}
     </div>
   );
 }
@@ -139,14 +140,14 @@ function TaskStats({ all, cats, projects }) {
    TASK FORM
    ========================================================= */
 const REMINDERS = [{ value: null, label: 'None' }, { value: 0, label: 'At time' }, { value: 30, label: '30 min before' }, { value: 60, label: '1 hr before' }, { value: 1440, label: '1 day before' }];
-export function TaskForm({ id, due, projectId, goalId }) {
+export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
   const { pop, toast } = useApp();
   const [x, setX] = useState(null);
   const [sub, setSub] = useState('');
   const [del, setDel] = useState(false);
   const projects = useLiveQuery(() => db.projects.toArray(), []) || [];
   const goals = useLiveQuery(() => db.goals.where('status').equals('active').toArray(), []) || [];
-  useEffect(() => { (async () => setX(id ? await db.tasks.get(id) : { title: '', description: '', categoryId: null, projectId: projectId || null, goalId: goalId || null, due: due === undefined ? today() : due, dueTime: '', priority: 'none', recurrence: 'none', subtasks: [], reminder: null, done: false }))(); }, [id]);
+  useEffect(() => { (async () => setX(id ? await db.tasks.get(id) : { title: '', description: '', categoryId: null, projectId: projectId || null, goalId: goalId || null, due: due === undefined ? today() : due, dueTime: dueTime || '', duration: duration || 30, priority: 'none', recurrence: 'none', subtasks: [], reminder: null, done: false }))(); }, [id]);
   if (!x) return <div className="screen no-nav" />;
   const set = (p) => setX((v) => ({ ...v, ...p }));
   const save = async () => {
@@ -170,6 +171,9 @@ export function TaskForm({ id, due, projectId, goalId }) {
             <input type="date" className="input" value={x.due} onChange={(e) => set({ due: e.target.value })} />
             <input type="time" className="input" value={x.dueTime || ''} onChange={(e) => set({ dueTime: e.target.value })} />
           </div>
+        )}
+        {x.due && x.dueTime && (
+          <Field label="Duration (for your timeline)"><Chips value={x.duration || 30} onChange={(v) => set({ duration: v })} options={[15, 30, 45, 60, 90, 120].map((v) => ({ value: v, label: v < 60 ? `${v}m` : `${v / 60}h` }))} /></Field>
         )}
         {x.due && <Field label="Reminder"><Chips value={x.reminder} onChange={(v) => set({ reminder: v })} options={REMINDERS} /></Field>}
         <Field label="Repeat"><Chips value={x.recurrence} onChange={(v) => set({ recurrence: v })} options={[{ value: 'none', label: 'Never' }, { value: 'daily', label: 'Daily' }, { value: 'weekdays', label: 'Weekdays' }, { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }]} /></Field>

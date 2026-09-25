@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useApp } from '../ctx';
 import { tap } from '../lib/native';
+import { Face } from './faces';
 
 export const MOODS = [
   { v: 1, e: '😣', label: 'Awful', color: '#f87171' },
@@ -260,8 +261,8 @@ export function MoodScale({ value, onChange, size }) {
   return (
     <div className="mood-row">
       {MOODS.map((m) => (
-        <button key={m.v} className={`mood-btn ${value === m.v ? 'on' : ''}`} style={size ? { fontSize: size } : null} onClick={() => { tap('medium'); onChange(m.v); }} aria-label={m.label}>
-          {m.e}
+        <button key={m.v} className={`mood-btn ${value === m.v ? 'on' : ''}`} onClick={() => { tap('medium'); onChange(m.v); }} aria-label={m.label}>
+          <Face v={m.v} size={size || 34} />
         </button>
       ))}
     </div>
@@ -341,5 +342,21 @@ export function Confirm({ open, onClose, title, body, confirmLabel = 'Delete', o
         <button className="btn danger grow" onClick={() => { onConfirm(); onClose(); }}>{confirmLabel}</button>
       </div>
     </Sheet>
+  );
+}
+
+/* Sub-tabs under a large title; remembers the last choice per screen for this session */
+const SUB = {};
+export function useSub(key, def) {
+  const [v, setV] = useState(SUB[key] || def);
+  return [v, (x) => { SUB[key] = x; setV(x); }];
+}
+export function SubTabs({ value, onChange, options }) {
+  return (
+    <div className="subtabs">
+      {options.map(([v, l]) => (
+        <button key={v} className={value === v ? 'on' : ''} onClick={() => { tap(); onChange(v); }}>{l}</button>
+      ))}
+    </div>
   );
 }
