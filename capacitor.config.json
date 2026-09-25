@@ -1,0 +1,9 @@
+{
+  "appId": "com.tarun.kaizen",
+  "appName": "Kaizen",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#000000" },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_icon", "iconColor": "#C8F35A" }
+  }
+}
