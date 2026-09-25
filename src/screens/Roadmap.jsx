@@ -9,16 +9,14 @@ import { useApp } from '../ctx';
 import { TopBar, Sheet, Confirm, Field, Chips, Ring } from '../ui/kit';
 import { HIcon } from '../ui/icons';
 import { success, tap, openUrl } from '../lib/native';
-import { fmtDate, diffDays, today } from '../lib/date';
+import { fmtDate, fmtDay, diffDays, today } from '../lib/date';
+import { sfxComplete, sfxTravel, sfxArrive, sfxFanfare } from '../lib/sound';
 import {
   findNode, isLeaf, tally, firstUndone, completeLesson, uncompleteLesson, markAll, lastCompleted, KINDS, MEDIA,
-  addResource, editResource, deleteResource, addChild, renameNode, deleteNode, setNote, fmtIv,
+  addResource, editResource, deleteResource, addChild, renameNode, deleteNode, setNote, fmtIv, studyDays, streakFrom,
 } from '../lib/study';
 
 export const MEDIUM_ICON = { video: PlayCircle, article: FileText, book: BookOpen, course: GraduationCap, interactive: MousePointerClick, problem: Code2, paper: ScrollText, code: Code2, exercise: PenLine };
-const OFFS = [0, 0.55, 0.9, 0.55, 0, -0.55, -0.9, -0.55];
-const GAP = 116;
-const TOP = 64;
 
 /* live data for a subject: subject row + done set */
 export function useSubject(sid) {
@@ -28,30 +26,29 @@ export function useSubject(sid) {
   return { subject, prog, done, loading: subject === undefined || prog === undefined };
 }
 
-/* =================================================================== Roadmap */
+/* =================================================================== Roadmap (transit-style route) */
+const plural = (w, n) => (n === 1 ? w : w.endsWith('y') ? w.slice(0, -1) + 'ies' : w + 's');
+const leavesOf = (n) => { const out = []; const go = (x) => (isLeaf(x) ? out.push(x) : x.children.forEach(go)); go(n); return out; };
+
 export function Roadmap({ sid, id }) {
   const { push, toast, celebrate } = useApp();
-  const { subject, done, loading } = useSubject(sid);
+  const { subject, prog, done, loading } = useSubject(sid);
   const wrap = useRef();
-  const [W, setW] = useState(360);
+  const rows = useRef([]);
   const [menu, setMenu] = useState(false);
   const [resOpen, setResOpen] = useState(false);
   const [quick, setQuick] = useState(null);
   const [adding, setAdding] = useState(false);
-  const [anim, setAnim] = useState(null); // { idx, phase }
+  const [anim, setAnim] = useState(null); // { idx, phase } 0 hold · 1 pop · 2 travel · 3 arrive
   const [mastered, setMastered] = useState(false);
   const [confirmAll, setConfirmAll] = useState(null);
+  const [openIdx, setOpenIdx] = useState(null);
   const prevTallies = useRef(null);
-
-  useLayoutEffect(() => {
-    const el = wrap.current;
-    if (!el) return;
-    const m = () => el.clientWidth && setW(el.clientWidth);
-    m();
-    const ro = new ResizeObserver(m);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [loading]);
+  const extra = useLiveQuery(async () => {
+    const [sess, days] = await Promise.all([db.studySessions.where('sid').equals(sid).toArray(), studyDays()]);
+    const timed = sess.filter((x) => x.kind === 'lesson' && x.mins > 0);
+    return { avg: timed.length ? timed.reduce((a, b) => a + b.mins, 0) / timed.length : 25, streak: streakFrom(days) };
+  }, [sid, prog?.length]);
 
   const hit = subject && id ? findNode(subject, id) : null;
   const node = subject ? (id ? hit?.node : { id: '__root', title: subject.title, children: subject.children, resources: [] }) : null;
@@ -65,7 +62,7 @@ export function Roadmap({ sid, id }) {
   const color = subject?.color || 'var(--accent)';
   const levelName = (kids.length && kids.every(isLeaf) ? subject?.levels?.[subject.levels.length - 1] : subject?.levels?.[depth]) || (kids.some((k) => !isLeaf(k)) ? 'Topic' : 'Lesson');
 
-  // detect newly completed children → queue the celebration animation for when this screen is visible
+  // newly completed child → play the travel animation once this screen is visible
   const sigNow = tallies.map((t) => `${t.done}/${t.total}`).join(',');
   const pending = useRef(null);
   useEffect(() => {
@@ -74,7 +71,8 @@ export function Roadmap({ sid, id }) {
     prevTallies.current = tallies;
     if (!prev || prev.length !== tallies.length) return;
     const idx = tallies.findIndex((t, i) => t.done === t.total && prev[i].done < prev[i].total);
-    if (idx >= 0) pending.current = { idx, whole: own.done === own.total && own.total > 0, fresh: Date.now() - lastCompleted.ts < 60000 };
+    if (idx >= 0) pending.current = { idx, whole: own.done === own.total && own.total > 0 };
+    else if (tallies.some((t, i) => t.done > prev[i].done)) { const j = tallies.findIndex((t, i) => t.done > prev[i].done); pending.current = { idx: j, partial: true }; }
   }, [sigNow]);
   useEffect(() => {
     const iv = setInterval(() => {
@@ -85,65 +83,83 @@ export function Roadmap({ sid, id }) {
     }, 160);
     return () => clearInterval(iv);
   }, []);
+  const scrollToRow = (i, smooth = true) => { const el = rows.current[i]; if (el) el.scrollIntoView({ block: 'center', behavior: smooth ? 'smooth' : 'auto' }); };
   const runCelebration = (p) => {
-    const y = TOP + p.idx * GAP;
-    const sc = wrap.current.closest('.screen') || document.scrollingElement;
-    const rect = wrap.current.getBoundingClientRect();
-    window.scrollTo({ top: window.scrollY + rect.top + y - window.innerHeight * 0.38, behavior: 'smooth' });
+    scrollToRow(p.idx);
+    if (p.partial) { setAnim({ idx: p.idx, phase: 1, partial: true }); setTimeout(() => sfxComplete(), 250); setTimeout(() => setAnim(null), 1100); return; }
     setAnim({ idx: p.idx, phase: 0 });
-    setTimeout(() => { setAnim({ idx: p.idx, phase: 1 }); success(); }, 380);
-    setTimeout(() => setAnim({ idx: p.idx, phase: 2 }), 1000);
+    setTimeout(() => { setAnim({ idx: p.idx, phase: 1 }); sfxComplete(); success(); }, 350);
+    setTimeout(() => { setAnim({ idx: p.idx, phase: 2 }); sfxTravel(850); }, 1050);
     setTimeout(() => {
       setAnim({ idx: p.idx, phase: 3 });
-      if (p.whole) { setMastered(true); celebrate(); }
-    }, 1850);
-    setTimeout(() => setAnim(null), 3400);
-    void sc;
+      sfxArrive();
+      if (p.idx + 1 < kids.length) { setOpenIdx(p.idx + 1); scrollToRow(p.idx + 1); }
+      if (p.whole) setTimeout(() => { setMastered(true); celebrate(); sfxFanfare(); }, 500);
+    }, 1950);
+    setTimeout(() => setAnim(null), 2900);
   };
 
-  // first open: bring the current node into view
+  // first open: centre the current topic
   const scrolled = useRef(false);
   useEffect(() => {
-    if (loading || scrolled.current || !wrap.current || current < 3) return;
+    if (loading || scrolled.current || current < 2) return;
     scrolled.current = true;
-    const rect = wrap.current.getBoundingClientRect();
-    window.scrollTo({ top: window.scrollY + rect.top + TOP + current * GAP - window.innerHeight * 0.4 });
+    setTimeout(() => scrollToRow(current, false), 30);
   }, [loading, current]);
 
   if (loading) return <div className="screen no-nav" />;
   if (!node) return <div className="screen no-nav"><TopBar title="Not found" /><p className="dim">This part of the roadmap no longer exists.</p></div>;
 
-  const pos = (i) => ({ x: W / 2 + OFFS[i % OFFS.length] * Math.max(0, W / 2 - 64), y: TOP + i * GAP });
   const n = kids.length;
-  const height = TOP + n * GAP + 90;
-  const segD = (i) => {
-    const a = pos(i), b = i + 1 < n ? pos(i + 1) : { x: W / 2, y: TOP + n * GAP + 6 };
-    return `M ${a.x} ${a.y} C ${a.x} ${a.y + GAP * 0.5} ${b.x} ${b.y - GAP * 0.5} ${b.x} ${b.y}`;
-  };
   const open = (k) => (isLeaf(k) ? push('Lesson', { sid, id: k.id }) : push('Roadmap', { sid, id: k.id }));
   const pct = own.total ? own.done / own.total : 0;
-  const crumbs = [subject.title, ...path.map((p) => p.title)];
+  const avg = extra?.avg || 25;
+  const dur = (lessons) => { const m = Math.round(lessons * avg); return m < 60 ? `${m} min` : `${(m / 60).toFixed(m < 600 ? 1 : 0).replace(/\.0$/, '')} h`; };
+  const doneAt = new Map((prog || []).filter((x) => x.done).map((x) => [x.id, x.doneAt]));
+  const lastDone = (k) => leavesOf(k).map((l) => doneAt.get(l.id)).filter(Boolean).sort().pop();
+  const parent = path[path.length - 1];
+  const siblings = id ? (parent ? parent.children : subject.children) : kids;
+  const selfIdx = id ? siblings.findIndex((x) => x.id === id) : -1;
+  const parentLevel = subject.levels?.[Math.max(0, depth - 1)] || 'Topic';
+  const eyebrow = id ? `${[subject.title, ...path.map((x) => x.title)].join(' · ')}` : `${n} ${plural((subject.levels?.[0] || 'topic').toLowerCase(), n)}`;
+  const nextLeaf = firstUndone(kids, done);
+  const expanded = openIdx ?? current;
 
   let press;
   const startPress = (k) => { press = setTimeout(() => { tap('medium'); setQuick(k); press = 'fired'; }, 480); };
-  const endPress = (k, e) => { if (press === 'fired') { e.preventDefault(); press = null; return; } clearTimeout(press); press = null; open(k); };
+  const endPress = (k, i, e) => {
+    if (press === 'fired') { e.preventDefault(); press = null; return; }
+    clearTimeout(press); press = null;
+    if (isLeaf(k)) open(k); else { tap(); setOpenIdx(expanded === i ? -1 : i); }
+  };
 
   return (
-    <div className="screen no-nav page-enter">
-      <TopBar title={id ? node.title : subject.title} right={<button className="icon-btn" onClick={() => setMenu(true)} aria-label="More"><MoreHorizontal size={20} /></button>} />
-      <div className="rm-hero" style={{ '--c': color }}>
-        <div className="eyebrow ellipsis" style={{ color }}>{id ? crumbs.join('  ›  ') : `${n} ${(subject.levels?.[0] || 'topic').toLowerCase()}s · roadmap`}</div>
-        <div className="h2 mt-4" style={{ lineHeight: 1.2 }}>{id ? node.title : subject.long || subject.title}</div>
-        {!id && subject.description && <p className="small dim clamp3" style={{ margin: '6px 0 0' }}>{subject.description}</p>}
-        {node.summary && <p className="small dim" style={{ margin: '6px 0 0' }}>{node.summary}</p>}
-        <div className="rm-stats">
-          <Ring size={58} stroke={6} value={pct} color={color}><span className="num" style={{ fontWeight: 780, fontSize: 14 }}>{Math.round(pct * 100)}%</span></Ring>
-          <div className="grow">
-            <div className="rm-stat-row"><b className="num">{own.done}</b><span>/ {own.total} {own.total === 1 ? 'lesson' : 'lessons'} done</span></div>
-            {!kids.every(isLeaf) && <div className="rm-stat-row"><b className="num">{tallies.filter((t) => t.done === t.total).length}</b><span>/ {n} {levelName.toLowerCase()}{n === 1 ? '' : 's'} complete</span></div>}
-          </div>
-          {(node.resources || []).length > 0 && <button className="btn sm" onClick={() => setResOpen(true)}><Link2 size={15} /> {node.resources.length}</button>}
+    <div className="screen no-nav page-enter" style={{ paddingBottom: 120, '--c': color }}>
+      <TopBar title="" right={<button className="icon-btn" onClick={() => setMenu(true)} aria-label="More"><MoreHorizontal size={20} /></button>} />
+      <div className="rt-head">
+        <div className="rt-badge">{id ? selfIdx + 1 : <HIcon icon={subject.icon || 'i:BookOpen'} size={20} color="#fff" />}</div>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className="rt-eyebrow ellipsis">{eyebrow}{id ? ` · ${parentLevel} ${selfIdx + 1} of ${siblings.length}` : ''}</div>
+          <h1 className="rt-title">{id ? node.title : subject.long || subject.title}</h1>
         </div>
+      </div>
+      {(node.summary || (!id && subject.description)) && <p className="small dim clamp3" style={{ margin: '10px 0 0' }}>{node.summary || subject.description}</p>}
+
+      <div className="rt-strip" style={{ gridTemplateColumns: `repeat(${Math.max(1, siblings.length)}, minmax(0, 1fr))` }}>
+        {siblings.map((x, i) => {
+          const t = tally(x, done, cache);
+          const f = t.total ? t.done / t.total : 0;
+          const me = id ? i === selfIdx : i === current;
+          return <button key={x.id} className={`rt-seg ${me ? 'me' : ''}`} aria-label={x.title} onClick={() => (id ? (i !== selfIdx && push('Roadmap', { sid, id: x.id })) : scrollToRow(i))}><i style={{ width: `${f * 100}%` }} /></button>;
+        })}
+      </div>
+      <div className="rt-strip-l"><span>{Math.round(pct * 100)}% complete</span><span>{id ? `${parentLevel} ${selfIdx + 1} of ${siblings.length}` : `${n - tallies.filter((t) => t.done === t.total).length} ${plural((subject.levels?.[0] || 'topic').toLowerCase(), 2)} to go`}</span></div>
+
+      <div className="rt-pills">
+        <span><b>{own.done}</b>/{own.total} lessons</span>
+        <span><b>{extra?.streak || 0}</b> day streak</span>
+        <span><b>{own.total - own.done ? dur(own.total - own.done) : '—'}</b> left</span>
+        {(node.resources || []).length > 0 && <button onClick={() => setResOpen(true)}><Link2 size={13} /> {node.resources.length}</button>}
       </div>
 
       {n === 0 ? (
@@ -152,66 +168,86 @@ export function Roadmap({ sid, id }) {
           <button className="btn sm mt-12" onClick={() => setAdding(true)}><Plus size={15} /> Add a {levelName.toLowerCase()}</button>
         </div>
       ) : (
-        <div className="rm" ref={wrap} style={{ height, '--c': color }}>
-          <svg width={W} height={height} className="rm-svg">
-            <defs><linearGradient id="rmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} /><stop offset="1" stopColor={color} stopOpacity=".65" /></linearGradient></defs>
-            {kids.map((k, i) => <path key={'t' + k.id} d={segD(i)} className="rm-track" />)}
-            {kids.map((k, i) => <path key={'c' + k.id} d={segD(i)} className="rm-center" />)}
-            {kids.map((k, i) => {
-              const on = tallies[i].done === tallies[i].total;
-              const drawing = anim && anim.idx === i && anim.phase < 2;
-              const animNow = anim && anim.idx === i && anim.phase >= 2;
-              if (!on || drawing) return null;
-              return <path key={'s' + k.id + (animNow ? 'a' : '')} d={segD(i)} pathLength="1" className={`rm-trail ${animNow ? 'draw' : ''}`} stroke="url(#rmg)" />;
-            })}
-          </svg>
+        <div className="rt-list" ref={wrap}>
           {kids.map((k, i) => {
-            const p = pos(i);
             const t = tallies[i];
-            const full = t.done === t.total;
-            const partial = t.done > 0 && !full;
-            const isCur = i === current && !(anim && anim.phase < 3);
-            const pop = anim && anim.idx === i && anim.phase >= 1 && anim.phase < 3;
-            const arriving = anim && anim.phase === 3 && i === current;
             const leaf = isLeaf(k);
-            const left = p.x > W / 2 + 4 || (Math.abs(p.x - W / 2) < 5 && OFFS[(i + 1) % OFFS.length] > 0);
-            const labelW = left ? p.x - 46 - 6 : W - p.x - 46 - 6;
-            const shownFull = full && !(anim && anim.idx === i && anim.phase === 0);
+            const hold = anim && anim.idx === i && anim.phase === 0;
+            const full = t.done === t.total && !hold;
+            const isCur = i === current && !(anim && anim.phase < 3 && !anim.partial);
+            const prevFull = i > 0 && tallies[i - 1].done === tallies[i - 1].total && !(anim && anim.idx === i - 1 && anim.phase < 2);
+            const fillingBot = anim && anim.idx === i && anim.phase === 2;
+            const fillingTop = anim && anim.idx === i - 1 && anim.phase === 2;
+            const popping = anim && anim.idx === i && anim.phase === 1;
+            const arriving = anim && anim.phase === 3 && i === anim.idx + 1;
+            const isOpen = !leaf && expanded === i;
+            const last = i === n - 1;
+            const kicker = full ? 'Completed' : isCur ? (t.done ? 'In progress' : 'Up next') : last ? 'Final' : 'Not started';
+            const meta = leaf
+              ? [k.difficulty, k.resources?.length ? `${k.resources.length} resource${k.resources.length > 1 ? 's' : ''}` : null, full && doneAt.get(k.id) ? `done ${fmtDay(doneAt.get(k.id)).toLowerCase()}` : null].filter(Boolean).join(' · ') || 'Lesson'
+              : `${t.done}/${t.total} lessons · ${full ? `completed ${fmtDay(lastDone(k) || today()).toLowerCase()}` : `about ${dur(t.total - t.done)} left`}`;
+            const upcoming = isOpen ? leavesOf(k).filter((l) => !done.has(l.id)).slice(0, 3) : [];
+            const dots = Math.min(t.total, 12);
+            const lit = Math.round((t.done / Math.max(1, t.total)) * dots);
             return (
-              <React.Fragment key={k.id}>
-                {isCur && <span className="rm-halo" style={{ left: p.x - 60, top: p.y - 60 }} />}
-                <button
-                  className={`rm-node ${shownFull ? 'done' : ''} ${isCur ? 'cur' : ''} ${pop ? 'pop' : ''} ${arriving ? 'arrive' : ''}`}
-                  style={{ left: p.x - 36, top: p.y - 36 }}
-                  onPointerDown={() => startPress(k)} onPointerLeave={() => { if (press !== 'fired') clearTimeout(press); }}
-                  onClick={(e) => endPress(k, e)} onContextMenu={(e) => { e.preventDefault(); clearTimeout(press); setQuick(k); }}
-                  aria-label={k.title}
-                >
-                  <svg className="rm-ring" viewBox="0 0 80 80" width="80" height="80">
-                    <circle cx="40" cy="40" r="37" className="bg" />
-                    {!leaf && t.total > 0 && (t.done > 0 || shownFull) && <circle cx="40" cy="40" r="37" className="fg" stroke={color} strokeDasharray={`${(shownFull ? 1 : t.done / t.total) * 232.5} 232.5`} />}
-                  </svg>
-                  <span className="rm-face">
-                    {shownFull ? <Check size={30} strokeWidth={3.2} /> : isCur && t.done === 0 && leaf ? <Play size={24} fill="currentColor" /> : partial ? <span className="rm-frac">{t.done}<i>/{t.total}</i></span> : leaf ? React.createElement(MEDIUM_ICON[k.resources?.find((r) => r.kind === 'practice')?.medium || k.resources?.[0]?.medium] || BookOpen, { size: 24, strokeWidth: 2.2 }) : <span className="rm-num">{i + 1}</span>}
-                    <i className="rm-shine" />
-                  </span>
-                  {pop && <span className="rm-burst">{Array.from({ length: 10 }, (_, j) => <i key={j} style={{ '--a': `${j * 36}deg`, '--d': `${(j % 3) * 40}ms` }}><Star size={j % 2 ? 12 : 16} fill="currentColor" /></i>)}</span>}
-                  {isCur && !(anim && anim.phase < 3) && <span className="rm-bubble">{t.done === 0 ? (i === 0 && own.done === 0 ? 'START' : 'NEXT') : 'CONTINUE'}</span>}
-                </button>
-                <div className={`rm-label ${left ? 'l' : 'r'} ${full ? 'done' : ''} ${isCur ? 'cur' : ''}`} style={{ top: p.y - 34, maxWidth: Math.max(110, labelW), ...(left ? { right: W - p.x + 48 } : { left: p.x + 48 }) }} onClick={() => open(k)}>
-                  <div className="k">{String(i + 1).padStart(2, '0')}{full ? ' · done' : isCur ? ' · up next' : ''}</div>
-                  <div className="t">{k.title}</div>
-                  {!leaf && <div className="rm-mini"><i style={{ width: `${(t.done / Math.max(1, t.total)) * 100}%` }} /></div>}
-                  <div className="s">
-                    {leaf ? (k.difficulty || (k.resources?.length ? `${k.resources.length} resource${k.resources.length > 1 ? 's' : ''}` : 'Lesson')) : `${t.done}/${t.total} lessons${k.children.some((c) => !isLeaf(c)) ? ` · ${k.children.length} ${(subject.levels?.[depth + 1] || 'topic').toLowerCase()}${k.children.length > 1 ? 's' : ''}` : ''}`}
-                  </div>
+              <div key={k.id} ref={(el) => (rows.current[i] = el)} className={`rt-row ${isOpen ? 'open' : ''}`}>
+                <div className="rt-rail">
+                  {i > 0 && <i className={`top ${prevFull ? 'on' : ''} ${fillingTop ? 'fill late' : ''}`} />}
+                  {!last && <i className={`bot ${full ? 'on' : isCur ? 'half' : ''} ${fillingBot ? 'fill' : ''}`} />}
+                  {isCur && !anim && !last && <b className="rt-train" />}
+                  <button
+                    className={`rt-node ${full ? 'done' : ''} ${isCur ? 'cur' : ''} ${popping ? 'pop' : ''} ${arriving ? 'arrive' : ''}`}
+                    onPointerDown={() => startPress(k)} onPointerLeave={() => { if (press !== 'fired') clearTimeout(press); }}
+                    onClick={(e) => endPress(k, i, e)} onContextMenu={(e) => { e.preventDefault(); clearTimeout(press); setQuick(k); }}
+                    aria-label={k.title}
+                  >
+                    {full ? <Check size={20} strokeWidth={3} /> : isCur && !leaf && t.done ? <span className="frac">{t.done}/{t.total}</span> : isCur && leaf ? <Play size={17} fill="currentColor" /> : <span>{i + 1}</span>}
+                    {popping && <span className="rm-burst">{Array.from({ length: 10 }, (_, j) => <i key={j} style={{ '--a': `${j * 36}deg`, '--d': `${(j % 3) * 40}ms` }}><Star size={j % 2 ? 11 : 14} fill="currentColor" /></i>)}</span>}
+                  </button>
                 </div>
-              </React.Fragment>
+                <div className="rt-body">
+                  <button className="rt-hit" onPointerDown={() => startPress(k)} onPointerLeave={() => { if (press !== 'fired') clearTimeout(press); }} onClick={(e) => endPress(k, i, e)} onContextMenu={(e) => { e.preventDefault(); clearTimeout(press); setQuick(k); }}>
+                    <span className={`rt-kick ${isCur ? 'cur' : ''}`}>{kicker}</span>
+                    <span className={`rt-name ${full || isCur ? '' : 'dim2'} ${isCur ? 'big' : ''}`}>{k.title}</span>
+                    <span className="rt-meta">{meta}</span>
+                    {!leaf && <ChevronRight size={18} className={`rt-chev ${isOpen ? 'rot' : ''}`} />}
+                  </button>
+                  {isOpen && (
+                    <div className="rt-panel">
+                      <div className="rt-dots">
+                        {Array.from({ length: dots }, (_, j) => <React.Fragment key={j}>{j > 0 && <i className={j < lit ? 'on' : ''} />}<b className={j < lit ? 'on' : ''} /></React.Fragment>)}
+                      </div>
+                      {upcoming.map((l, j) => (
+                        <button key={l.id} className={`rt-lesson ${j === 0 ? 'next' : ''}`} onClick={() => push('Lesson', { sid, id: l.id })}>
+                          <span className="n">{j === 0 ? <Play size={11} fill="currentColor" /> : j + 1}</span>
+                          <span className="grow ellipsis">{l.title}</span>
+                          {j === 0 && <span className="tag">Next · {Math.round(avg)} min</span>}
+                        </button>
+                      ))}
+                      {!upcoming.length && <div className="small muted" style={{ padding: '4px 2px' }}>Every lesson here is complete.</div>}
+                      <button className="rt-open" onClick={() => open(k)}>Open {plural((subject.levels?.[depth] || 'topic').toLowerCase(), 1)} <ChevronRight size={16} /></button>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })}
-          <div className={`rm-trophy ${own.done === own.total ? 'won' : ''}`} style={{ left: W / 2 - 30, top: TOP + n * GAP - 24 }}>
-            <Trophy size={26} />
+        </div>
+      )}
+
+      {nextLeaf ? (
+        <div className="rt-dock">
+          <div className="ico"><Play size={18} fill="currentColor" /></div>
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div className="k">Up next · about {Math.round(avg)} min</div>
+            <div className="t ellipsis">{nextLeaf.title}</div>
           </div>
+          <button onClick={() => push('Lesson', { sid, id: nextLeaf.id })}>{own.done ? 'Continue' : 'Start'}</button>
+        </div>
+      ) : n > 0 && (
+        <div className="rt-dock">
+          <div className="ico"><Trophy size={18} /></div>
+          <div className="grow"><div className="k">All complete</div><div className="t">Finished lessons come back in Revise</div></div>
         </div>
       )}
 

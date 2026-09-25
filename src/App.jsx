@@ -36,6 +36,7 @@ import { Study, StudyImport, SubjectSettings, ReviewDeck, StudyStats, ReviewProm
 import { Roadmap, Lesson } from './screens/Roadmap';
 import { LearningForm, LearningDetail, ExperimentDetail, Nugget, NuggetPrompt } from './screens/Learnings';
 import { ensureSubjects } from './lib/study';
+import { setSoundEnabled } from './lib/sound';
 import Companion from './ui/Companion';
 
 const SCREENS = {
@@ -97,6 +98,7 @@ export default function App() {
     if (xp.total.level !== last) setKV('lastLevel', xp.total.level);
   }, [xp?.total.level]);
 
+  useEffect(() => { setSoundEnabled(settings.sound); }, [settings.sound]);
   // theme
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme;
@@ -228,10 +230,10 @@ export default function App() {
     const [h, t, g] = await Promise.all([db.habits.toArray(), db.tasks.filter((x) => !x.done).toArray(), db.goals.toArray()]);
     const [pp, ii] = await Promise.all([db.people.toArray(), db.interactions.count()]);
     const [subs, pc, cc, rv, ss, ln] = await Promise.all([db.subjects.toArray(), db.progress.count(), db.cards.count(), db.reviews.count(), db.studySessions.count(), db.learnings.count()]);
-    const study = [subs.map((x) => [x.sid, x.reminder, x.reminderTime, x.active, x.dailyMins]), pc, cc, rv, ss, ln, settings.reviewTime, settings.studyReminders, settings.nuggets, settings.nuggetsPerDay];
+    const study = [subs.map((x) => [x.sid, x.reminder, x.reminderTime, x.active, x.dailyMins]), pc, cc, rv, ss, ln, settings.reviewTime, settings.studyReminders, settings.nuggets, settings.nuggetsPerDay, settings.peopleTime, settings.peopleWeekends];
     return JSON.stringify([study, h.map((x) => [x.id, x.reminder, x.reminderTime, x.intervalMins, x.windowStart, x.windowEnd, x.days, x.archived, x.name]), t.map((x) => [x.id, x.due, x.dueTime, x.reminder]), g.map((x) => [x.id, x.status, x.checkinFreq, x.checkinTime]), pp.map((x) => [x.id, x.every]), ii]);
   }, []);
-  useEffect(() => { if (ready && sig) rescheduleSoon(); }, [sig, ready, settings.bedtimeTarget, settings.morningReminder, settings.notifications]);
+  useEffect(() => { if (ready && sig) rescheduleSoon(); }, [sig, ready, settings.bedtimeTarget, settings.morningReminder, settings.notifications, settings.peopleTime, settings.peopleWeekends, settings.reviewTime, settings.studyReminders, settings.nuggets, settings.nuggetsPerDay]);
 
   const ctx = useMemo(() => ({ push, pop, reset, toast, celebrate, settings, goTab, tab }), [push, pop, reset, toast, celebrate, settings, goTab, tab]);
 
