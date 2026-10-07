@@ -5,7 +5,7 @@ import { StudyCard } from './Study';
 import { ExperimentsToday } from './Learnings';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
-import { today, greeting, dow, fmtHM, hmToMin, addDays, lastNDays, weekStart, DAYS_SHORT, MONTHS, parse } from '../lib/date';
+import { today, greeting, dow, fmtHM, hmToMin, addDays, lastNDays, weekStart, DAYS_SHORT, MONTHS, parse , beforeDayStart } from '../lib/date';
 import { computeDay, habitDueOn, checkinDueToday, money, sumByDate } from '../lib/logic';
 import { MultiRing, MoodScale, Sheet, TagSelect, Scale5, MOODS } from '../ui/kit';
 import { HabitRow, BreakRow, TaskRow, GoalCard, SectionHead } from '../ui/rows';
@@ -17,8 +17,16 @@ import Companion from '../ui/Companion';
 import { useXP, companionMood } from './You';
 import { useEnergy } from './Health';
 import { personStatus, Avatar } from './People';
+import { TodayBento, TodayFocus, TodayTimeline, TodayChecklist, TodaySky, YesterdayPrompt } from './TodayLayouts';
 
+const LAYOUTS = { bento: TodayBento, focus: TodayFocus, timeline: TodayTimeline, checklist: TodayChecklist, sky: TodaySky };
 export default function Today() {
+  const { settings } = useApp();
+  const L = LAYOUTS[settings.todayLayout] || TodayClassic;
+  return <L />;
+}
+
+function TodayClassic() {
   const { push, settings, toast, goTab } = useApp();
   const t = today();
   const [fab, setFab] = useState(false);
@@ -85,7 +93,7 @@ export default function Today() {
   const mins = now.getHours() * 60 + now.getMinutes();
   const bed = hmToMin(settings.bedtimeTarget || '23:00');
   const showMorning = !sleepToday?.wakeTs && mins >= 240 && mins < 780;
-  const showNight = !journal && (mins >= Math.max(1080, bed - 180) || mins < 180);
+  const showNight = !journal && (mins >= Math.max(1080, bed - 180) || beforeDayStart());
   const sched = (settings.schedule || {})[dow(t)] || [];
   const workoutDone = workouts.some((w) => w.completed);
   const spent = txToday.filter((x) => x.direction === 'debit').reduce((a, b) => a + b.amount, 0);
@@ -169,6 +177,7 @@ export default function Today() {
       </button>
 
       {/* Contextual prompts */}
+      <YesterdayPrompt />
       {showMorning && (
         <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('Morning')}>
           <div className="swatch" style={{ background: 'color-mix(in srgb, var(--goal) 18%, transparent)' }}><Sunrise size={20} color="var(--goal)" /></div>

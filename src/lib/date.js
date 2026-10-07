@@ -2,7 +2,26 @@
 const pad = (n) => String(n).padStart(2, '0');
 
 export const ymd = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-export const today = () => ymd(new Date());
+// The app's "today" doesn't flip at midnight: it flips at the day-start time (default 06:00),
+// or earlier if you did your morning check-in after waking. 1–5 AM still belongs to last night.
+let DAY_START = 6 * 60;
+let EARLY_START = '';
+export const calendarToday = () => ymd(new Date());
+export function setDayStart(hhmm) { const [h, m] = String(hhmm || '06:00').split(':').map(Number); DAY_START = (h || 0) * 60 + (m || 0); }
+export function setEarlyStart(date) { EARLY_START = date || ''; }
+export const beforeDayStart = (d = new Date()) => d.getHours() * 60 + d.getMinutes() < DAY_START;
+/** The app-day a moment belongs to (a 2 AM timestamp counts for the previous day). */
+export const dayOf = (ts) => {
+  const d = new Date(ts);
+  if (beforeDayStart(d) && EARLY_START !== ymd(d)) return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+  return ymd(d);
+};
+export const today = () => {
+  const d = new Date();
+  const cal = ymd(d);
+  if (beforeDayStart(d) && EARLY_START !== cal) return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+  return cal;
+};
 export const parse = (s) => {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);

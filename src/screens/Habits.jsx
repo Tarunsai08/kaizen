@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Pencil, Archive, Trash2, Minus, X, Wind, Clock } from 'lucide-react';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
-import { today, addDays, weekStart, periodRange, buckets, fmtTime, fmtDay, lastNDays, ymd, fmtClock, uid, fmtHM } from '../lib/date';
+import { today, addDays, weekStart, periodRange, buckets, fmtTime, fmtDay, lastNDays, ymd, fmtClock, uid, fmtHM, dayOf } from '../lib/date';
 import { buildStats, streak, breakStats, habitDueOn, graceStatus, intervalAdherence, sumByDate, pct } from '../lib/logic';
 import { TopBar, Sheet, Field, Seg, Stepper, Toggle, DayPicker, ColorPicker, EmojiPicker, CategorySelect, TagSelect, Chips, PeriodToggle, Stat, Empty, Confirm, Ring, useInterval, Scale5 } from '../ui/kit';
 import { Heatmap, Bars, HBars, WeekHourGrid, HourHist, Line } from '../ui/charts';
@@ -463,7 +463,7 @@ function RelapseSheet({ open, onClose, habit }) {
   useEffect(() => { if (open) { setTrigger(null); setSeverity(null); setDuration(''); setNotes(''); const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); setWhen(d.toISOString().slice(0, 16)); } }, [open]);
   const save = async () => {
     const ts = when ? new Date(when).getTime() : Date.now();
-    await db.urges.add({ habitId: habit.id, kind: 'relapse', ts, date: ymd(new Date(ts)), trigger, severity, duration: duration ? Number(duration) : null, notes });
+    await db.urges.add({ habitId: habit.id, kind: 'relapse', ts, date: dayOf(ts), trigger, severity, duration: duration ? Number(duration) : null, notes });
     toast('Logged. Tomorrow is a new day');
     onClose();
   };

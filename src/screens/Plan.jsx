@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, X, Trash2, Pencil, Flag, FolderKanban, Minus, Check } from 'lucide-react';
 import { db } from '../db';
 import { useApp } from '../ctx';
-import { today, addDays, fmtDay, fmtDate, periodRange, buckets, ymd, diffDays, uid, fmtTime } from '../lib/date';
+import { today, addDays, fmtDay, fmtDate, periodRange, buckets, ymd, diffDays, uid, fmtTime, dayOf } from '../lib/date';
 import { goalProgress, goalPeriod, DEFAULT_CHECKIN, CHECKIN_LABEL, timeLeft, checkinDueToday, pct, avg } from '../lib/logic';
 import { TopBar, Seg, Field, Sheet, Chips, Stepper, Toggle, CategorySelect, PeriodToggle, Stat, Empty, Confirm, Bar, Ring, ColorPicker } from '../ui/kit';
 import { Bars, HBars, Line } from '../ui/charts';
@@ -52,7 +52,7 @@ function TasksView() {
   let body = null;
   if (v === 'today') {
     const l = sortT(open.filter((x) => x.due && x.due <= t));
-    const doneToday = tasks.filter((x) => x.done && x.doneAt && ymd(new Date(x.doneAt)) === t);
+    const doneToday = tasks.filter((x) => x.done && x.doneAt && dayOf(x.doneAt) === t);
     body = <>
       {l.length ? <div className="list">{l.map((x) => <TaskRow key={x.id} t={x} showDate={x.due !== t} projects={projects} goals={goals} />)}</div> : <Empty icon="☀️" title="Clear for today" sub="Add something or enjoy the space." />}
       {doneToday.length > 0 && <><div className="eyebrow mt-24 mb-8">Done today · {doneToday.length}</div><div className="list">{doneToday.map((x) => <TaskRow key={x.id} t={x} projects={projects} goals={goals} />)}</div></>}
@@ -114,11 +114,11 @@ function TaskStats({ all, cats, projects }) {
   const [from, to] = periodRange(period);
   const t = today();
   const created = all.filter((x) => x.createdAt && ymd(new Date(x.createdAt)) >= from && ymd(new Date(x.createdAt)) <= to);
-  const done = all.filter((x) => x.done && x.doneAt && ymd(new Date(x.doneAt)) >= from && ymd(new Date(x.doneAt)) <= to);
+  const done = all.filter((x) => x.done && x.doneAt && dayOf(x.doneAt) >= from && dayOf(x.doneAt) <= to);
   const ttc = done.filter((x) => x.createdAt).map((x) => (x.doneAt - x.createdAt) / 86400000);
   const bk = buckets(period);
-  const overdue = bk.map((b) => ({ label: b.label, value: b.from > t ? null : all.filter((x) => x.due && x.due >= b.from && x.due <= b.to && x.due < t && (!x.done || (x.doneAt && ymd(new Date(x.doneAt)) > x.due))).length }));
-  const doneTrend = bk.map((b) => ({ label: b.label, value: b.from > t ? null : all.filter((x) => x.done && x.doneAt && ymd(new Date(x.doneAt)) >= b.from && ymd(new Date(x.doneAt)) <= b.to).length }));
+  const overdue = bk.map((b) => ({ label: b.label, value: b.from > t ? null : all.filter((x) => x.due && x.due >= b.from && x.due <= b.to && x.due < t && (!x.done || (x.doneAt && dayOf(x.doneAt) > x.due))).length }));
+  const doneTrend = bk.map((b) => ({ label: b.label, value: b.from > t ? null : all.filter((x) => x.done && x.doneAt && dayOf(x.doneAt) >= b.from && dayOf(x.doneAt) <= b.to).length }));
   const byCat = {};
   created.forEach((x) => { const c = cats.find((z) => z.id === x.categoryId); const k = c ? `${c.icon} ${c.name}` : 'No category'; byCat[k] = (byCat[k] || 0) + 1; });
   return (

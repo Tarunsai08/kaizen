@@ -14,7 +14,7 @@ import { syncShieldEvents, pushShieldConfig } from './lib/screen';
 import { hcSync } from './lib/health';
 import { updateWidgets } from './lib/widgets';
 import { rescheduleSoon, registerActions, ensurePermission } from './lib/notify';
-import { today, nowHM } from './lib/date';
+import { today, nowHM, setDayStart, setEarlyStart } from './lib/date';
 
 import Today from './screens/Today';
 import { Habits, HabitForm, HabitDetail, Urge } from './screens/Habits';
@@ -81,6 +81,7 @@ export default function App() {
   const settings = useMemo(() => {
     const s = { ...DEFAULT_SETTINGS };
     (kv || []).forEach((r) => (s[r.key] = r.value));
+    setDayStart(s.dayStart); setEarlyStart(s.earlyStart);
     return s;
   }, [kv]);
 

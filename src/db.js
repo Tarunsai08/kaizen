@@ -95,6 +95,9 @@ export const DEFAULT_SETTINGS = {
   peopleWeekends: false,
   sound: true,
   roadmapStyle: 'route',
+  dayStart: '06:00',
+  earlyStart: '',
+  todayLayout: 'classic',
 };
 
 /* ---------- seed on first run ---------- */

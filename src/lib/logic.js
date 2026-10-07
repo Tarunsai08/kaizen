@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { today, addDays, dow, weekStart, range, diffDays, monthStart, monthEnd, yearStart, addMonths, parse, ymd, hmToMin } from './date';
+import { today, addDays, dow, weekStart, range, diffDays, monthStart, monthEnd, yearStart, addMonths, parse, ymd, hmToMin, dayOf } from './date';
 
 /* =========================================================
    HABITS
@@ -218,7 +218,7 @@ export async function computeDay(date = today(), settings) {
   const wDone = workouts.some((w) => w.completed);
   const move = sched.length || workouts.length ? (wDone ? 1 : workouts.length ? 0.5 : 0) : null;
   // tasks
-  const tDueToday = tasks.filter((t) => !t.skipped && ((t.due === date && !t.done) || (t.done && t.doneAt && ymd(new Date(t.doneAt)) === date)));
+  const tDueToday = tasks.filter((t) => !t.skipped && ((t.due === date && !t.done) || (t.done && t.doneAt && dayOf(t.doneAt) === date)));
   const tDone = tDueToday.filter((t) => t.done).length;
   const taskV = tDueToday.length ? tDone / tDueToday.length : null;
   // mind
@@ -430,7 +430,7 @@ export async function dailyMatrix(days = 90) {
   workouts.forEach((w) => { if (w.completed) get(w.date).workout = true; });
   urges.forEach((u) => { if (u.kind === 'relapse' || u.outcome === 'relapsed') { const r = get(u.date); r.relapses = (r.relapses || 0) + 1; } });
   txs.forEach((t) => { if (t.direction === 'debit') { const r = get(t.date); r.spend = (r.spend || 0) + t.amount; } });
-  tasks.forEach((t) => { if (t.done && t.doneAt) { const d = ymd(new Date(t.doneAt)); if (d >= from) { const r = get(d); r.tasksDone = (r.tasksDone || 0) + 1; } } });
+  tasks.forEach((t) => { if (t.done && t.doneAt) { const d = dayOf(t.doneAt); if (d >= from) { const r = get(d); r.tasksDone = (r.tasksDone || 0) + 1; } } });
   boredom.forEach((b) => get(b.date));
   Object.values(M).forEach((r) => { r.mood = r.moods.length ? r.moods.reduce((a, b) => a + b, 0) / r.moods.length : null; });
   return { M, boredom };

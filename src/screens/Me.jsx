@@ -7,7 +7,8 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { db, setKV, exportAll, importAll } from '../db';
 import { useApp } from '../ctx';
 import { today, fmtHM } from '../lib/date';
-import { TopBar, Field, Sheet, Seg, Toggle, Stat, Confirm, EmojiPicker, ColorPicker } from '../ui/kit';
+import { TODAY_LAYOUTS } from './TodayLayouts';
+import { TopBar, Field, Sheet, Seg, Toggle, Stat, Confirm, EmojiPicker, ColorPicker, Chips } from '../ui/kit';
 import { isNative, success } from '../lib/native';
 import { rescheduleAll, ensurePermission, notifyNow } from '../lib/notify';
 
@@ -102,6 +103,7 @@ export function Settings() {
           <Field label="Target bedtime"><input type="time" className="input" value={settings.bedtimeTarget} onChange={(e) => set('bedtimeTarget', e.target.value)} /></Field>
           <Field label="Target wake"><input type="time" className="input" value={settings.wakeTarget} onChange={(e) => set('wakeTarget', e.target.value)} /></Field>
         </div>
+        <Field label="My day starts at" hint="Until this time it still counts as the previous day — sleeping at 1–4 AM won't start a new day. Doing the morning check-in starts it early."><input type="time" className="input" value={settings.dayStart || '06:00'} onChange={(e) => set('dayStart', e.target.value || '06:00')} /></Field>
         <Field label="Night review reminder" hint={`Fires at ${fmtHM(minus(settings.bedtimeTarget, settings.nightReviewLead))}`}>
           <Seg value={settings.nightReviewLead} onChange={(v) => set('nightReviewLead', v)} options={[{ value: 15, label: '15m before' }, { value: 30, label: '30m' }, { value: 60, label: '1h' }]} />
         </Field>
@@ -126,6 +128,9 @@ export function Settings() {
         {isNative && <button className="btn" onClick={async () => { await ensurePermission(); await notifyNow('Kaizen', 'Notifications are working ✓'); }}>Send a test notification</button>}
         {isNative && <button className="btn" onClick={async () => { try { await LocalNotifications.changeExactNotificationSetting(); } catch { toast('Not needed on this Android version'); } }}>Allow on-time reminders (alarms)</button>}
         {isNative && <div className="small muted">On Poco / HyperOS: App info → Autostart ON and Battery saver → No restrictions, or reminders can be delayed.</div>}
+
+        <div className="eyebrow mt-8">Today screen</div>
+        <Field label="Layout" hint="Classic · Widgets (bento tiles) · Focus (one card at a time, swipe) · Timeline (your day on a sun arc) · Checklist (calm list) · Sky (light up a star for everything you finish)"><Chips wrap value={settings.todayLayout || 'classic'} onChange={(v) => set('todayLayout', v)} options={TODAY_LAYOUTS} /></Field>
 
         <div className="eyebrow mt-8">Keep in touch</div>
         <div className="grid-2">

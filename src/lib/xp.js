@@ -1,7 +1,7 @@
 // XP, levels, companion growth and streak freezes. Everything is derived from existing data,
 // so it can never drift out of sync and is recomputed on the fly.
 import { db, setKV } from '../db';
-import { today, addDays, ymd, monthStart, addMonths, monthEnd } from './date';
+import { today, addDays, ymd, monthStart, addMonths, monthEnd, dayOf } from './date';
 import { sumByDate, sleepMinutes } from './logic';
 
 export const AREAS = {
@@ -46,7 +46,7 @@ export async function computeXP() {
   const moodPerDay = {};
   moods.forEach((m) => { moodPerDay[m.date] = (moodPerDay[m.date] || 0) + 1; if (moodPerDay[m.date] <= 3) add('mind', 2, m.date); });
   journal.forEach((j) => add('mind', j.quick ? 8 : 15, j.date));
-  tasks.forEach((x) => { if (x.done && x.doneAt) add('work', x.priority === 'high' ? 15 : 8, ymd(new Date(x.doneAt))); });
+  tasks.forEach((x) => { if (x.done && x.doneAt) add('work', x.priority === 'high' ? 15 : 8, dayOf(x.doneAt)); });
   goals.forEach((g) => {
     const d = g.reviewedAt ? ymd(new Date(g.reviewedAt)) : g.periodEnd;
     const area = CAT_AREA[catName(g.categoryId)] || 'work';

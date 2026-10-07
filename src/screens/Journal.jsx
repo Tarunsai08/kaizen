@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { X, ChevronLeft, ChevronRight, Search, Lock, Moon, Sparkles, CalendarDays, Plus } from 'lucide-react';
 import { db, setKV } from '../db';
 import { useApp } from '../ctx';
-import { today, addDays, fmtDay, fmtDate, fmtTime, periodRange, buckets, weekStart, range, monthStart, addMonths, MONTHS, parse, ymd, dow, DAYS_SHORT, nowHM, fmtDur } from '../lib/date';
+import { today, calendarToday, beforeDayStart, setEarlyStart, addDays, fmtDay, fmtDate, fmtTime, periodRange, buckets, weekStart, range, monthStart, addMonths, MONTHS, parse, ymd, dow, DAYS_SHORT, nowHM, fmtDur, dayOf } from '../lib/date';
 import { habitDueOn, sumByDate, breakStats, computeInsights, avg, money, sleepMinutes, goalProgress } from '../lib/logic';
 import { TopBar, Sheet, Field, MoodScale, Scale5, TagSelect, Chips, PeriodToggle, Stat, Empty, MOODS, moodColor, moodEmoji, Toggle, Seg } from '../ui/kit';
 import { Line, Bars, HBars, MonthGrid, Heatmap } from '../ui/charts';
@@ -76,7 +76,7 @@ async function daySummary(date) {
     resisted: urges.filter((u) => u.kind === 'urge' && u.outcome === 'resisted').length,
     relapses: urges.filter((u) => u.kind === 'relapse' || u.outcome === 'relapsed').length,
     workout: w ? { completed: w.completed, desc: w.entries.map((e) => `${presets.find((p) => p.id === e.presetId)?.name || '?'} L${e.level}`).join(' + '), level0: w.willing === false } : null,
-    tasksDone: tasks.filter((t) => t.done && t.doneAt && ymd(new Date(t.doneAt)) === date).length,
+    tasksDone: tasks.filter((t) => t.done && t.doneAt && dayOf(t.doneAt) === date).length,
     tasksPending: tasks.filter((t) => !t.done && !t.skipped && t.due === date).length,
     tasksOverdue: tasks.filter((t) => !t.done && !t.skipped && t.due && t.due < date).length,
     checkins: checkins.map((c) => ({ ...c, title: goals.find((g) => g.id === c.goalId)?.title })),
@@ -118,9 +118,25 @@ const ROTATING = ['What made you laugh today?', 'What drained your energy?', 'Wh
 export function NightReview() {
   return <LockGate><NightReviewInner /></LockGate>;
 }
+// Which night is being reviewed: normally "today" (which already includes 1–5 AM).
+// If you stayed up past the day-start time, haven't reviewed last night and haven't done the
+// morning check-in yet, the review before noon still closes the previous day.
+function useReviewDate() {
+  return useLiveQuery(async () => {
+    const T = today();
+    if (new Date().getHours() >= 12) return T;
+    const y = addDays(T, -1);
+    const [jy, sl, jt] = await Promise.all([db.journal.where('date').equals(y).first(), db.sleep.where('date').equals(T).first(), db.journal.where('date').equals(T).first()]);
+    return !jy && !jt && !(sl && sl.wakeTs) ? y : T;
+  }, []);
+}
 function NightReviewInner() {
+  const t = useReviewDate();
+  if (!t) return <div className="timer-screen" />;
+  return <NightReviewFor t={t} />;
+}
+function NightReviewFor({ t }) {
   const { pop, push, settings, toast, celebrate } = useApp();
-  const t = today();
   const [step, setStep] = useState(0);
   const [quick, setQuick] = useState(false);
   const [sum, setSum] = useState(null);
@@ -155,7 +171,7 @@ function NightReviewInner() {
   };
   const goSleep = async () => {
     const now = new Date();
-    const wakeDate = now.getHours() >= 12 ? addDays(t, 1) : t;
+    const wakeDate = addDays(t, 1); // you wake up on the morning after the night you reviewed
     const ex = await db.sleep.where('date').equals(wakeDate).first();
     if (ex) await db.sleep.update(ex.id, { bedTs: now.getTime() }); else await db.sleep.add({ date: wakeDate, bedTs: now.getTime(), wakeTs: null, quality: null });
     success(); celebrate();
@@ -261,7 +277,8 @@ function NightReviewInner() {
    ========================================================= */
 export function Morning() {
   const { pop, push, settings, toast } = useApp();
-  const t = today();
+  // Woke up before the day-start time? The morning check-in starts the new day early.
+  const [t] = useState(() => (beforeDayStart() ? calendarToday() : today()));
   const [wake, setWake] = useState(nowHM());
   const [quality, setQuality] = useState(null);
   const [mood, setMood] = useState(null);
@@ -279,6 +296,7 @@ export function Morning() {
   const save = async () => {
     const [h, m] = wake.split(':').map(Number);
     const w = new Date(); w.setHours(h, m, 0, 0);
+    if (t === calendarToday() && beforeDayStart()) { await setKV('earlyStart', t); setEarlyStart(t); }
     if (data.sleep) await db.sleep.update(data.sleep.id, { wakeTs: w.getTime(), quality });
     else await db.sleep.add({ date: t, bedTs: null, wakeTs: w.getTime(), quality });
     if (mood) await db.moods.add({ date: t, ts: Date.now(), mood, tags: [], kind: 'morning' });
@@ -492,7 +510,7 @@ export function WeeklyReview() {
   habits.filter((h) => !h.archived && h.freq !== 'weekly').forEach((h) => range(ws, we > today() ? today() : we).forEach((d) => { if (habitDueOn(h, d)) { hn++; if ((byHD[h.id + '|' + d] || 0) >= (h.target || 1)) hd++; } }));
   const goalsProg = new Set(checkins.filter((c) => c.response === 'yes').map((c) => c.goalId)).size;
   const spent = txs.filter((x) => x.direction === 'debit').reduce((a, b) => a + b.amount, 0);
-  const tDone = tasks.filter((x) => x.done && x.doneAt && ymd(new Date(x.doneAt)) >= ws && ymd(new Date(x.doneAt)) <= we).length;
+  const tDone = tasks.filter((x) => x.done && x.doneAt && dayOf(x.doneAt) >= ws && dayOf(x.doneAt) <= we).length;
   return (
     <div className="screen no-nav page-enter">
       <TopBar title="Weekly review" />
