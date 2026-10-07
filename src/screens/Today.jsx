@@ -17,16 +17,16 @@ import Companion from '../ui/Companion';
 import { useXP, companionMood } from './You';
 import { useEnergy } from './Health';
 import { personStatus, Avatar } from './People';
-import { SkyHero, GardenHero, OceanHero, CityHero, RocketHero, YesterdayPrompt } from './TodayLayouts';
+import { YesterdayPrompt } from './TodayLayouts';
+import { LAYOUTS } from './today';
 
-const HEROES = { sky: SkyHero, garden: GardenHero, ocean: OceanHero, city: CityHero, rocket: RocketHero };
 export default function Today() {
   const { settings } = useApp();
-  const k = HEROES[settings.todayLayout] ? settings.todayLayout : 'classic';
-  return <TodayClassic key={k} Hero={HEROES[k]} skin={HEROES[k] ? `skin-${k}` : ''} />;
+  const L = LAYOUTS[settings.todayLayout];
+  return L ? <L key={settings.todayLayout} /> : <TodayClassic />;
 }
 
-function TodayClassic({ Hero, skin = '' }) {
+function TodayClassic() {
   const { push, settings, toast, goTab } = useApp();
   const t = today();
   const [fab, setFab] = useState(false);
@@ -107,8 +107,7 @@ function TodayClassic({ Hero, skin = '' }) {
   };
 
   return (
-    <div className={`screen fade-in ${skin}`}>
-      {Hero ? <Hero /> : (<>
+    <div className="screen fade-in">
       {/* Header */}
       <div className="row between" style={{ marginBottom: 18, marginTop: 4 }}>
         <div>
@@ -147,8 +146,6 @@ function TodayClassic({ Hero, skin = '' }) {
           </div>
         </div>
       </div>
-
-      </>)}
 
       {/* Intention */}
       {intention?.text && (

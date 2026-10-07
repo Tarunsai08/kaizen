@@ -7,7 +7,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { db, setKV, exportAll, importAll } from '../db';
 import { useApp } from '../ctx';
 import { today, fmtHM } from '../lib/date';
-import { TODAY_LAYOUTS } from './TodayLayouts';
+import { TODAY_LAYOUTS } from './today';
 import { TopBar, Field, Sheet, Seg, Toggle, Stat, Confirm, EmojiPicker, ColorPicker, Chips } from '../ui/kit';
 import { isNative, success } from '../lib/native';
 import { rescheduleAll, ensurePermission, notifyNow } from '../lib/notify';
@@ -130,7 +130,7 @@ export function Settings() {
         {isNative && <div className="small muted">On Poco / HyperOS: App info → Autostart ON and Battery saver → No restrictions, or reminders can be delayed.</div>}
 
         <div className="eyebrow mt-8">Today screen</div>
-        <Field label="Layout" hint="Every layout shows everything. Only the top scene changes: Night sky (light a star) · Garden (plants grow and bloom) · Reef (fish swim up to the light) · Skyline (windows light up) · Launch (fuel the rocket to lift off)"><Chips wrap value={settings.todayLayout || 'classic'} onChange={(v) => set('todayLayout', v)} options={TODAY_LAYOUTS} /></Field>
+        <Field label="Layout" hint="Every layout shows your whole day: habits, tasks, goals, study, workout, money and more. Sky: light a star for each thing done · Quest log: an RPG character sheet · Orbit: your day as a solar system · Notebook: a hand-drawn bullet journal · Journey map: walk the day’s trail · Cockpit: a spaceship HUD · Arcade: neon retro game"><Chips wrap value={settings.todayLayout || 'classic'} onChange={(v) => set('todayLayout', v)} options={TODAY_LAYOUTS} /></Field>
 
         <div className="eyebrow mt-8">Keep in touch</div>
         <div className="grid-2">

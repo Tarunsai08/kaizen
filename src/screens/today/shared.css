@@ -1,0 +1,22 @@
+/* shared bits for the Today layouts */
+
+.lx button { text-align: inherit; }
+.qa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.qa-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px 6px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; font-weight: 650; animation: qaIn .35s cubic-bezier(.3,1.4,.5,1) both; }
+.qa-tile:active { transform: scale(.95); }
+@keyframes qaIn { from { opacity: 0; transform: translateY(10px) scale(.92); } }
+.lx .grow { flex: 1; }
+.lx .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lx.screen { padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 96px); }
+/* Sky extras */
+.sky-more { display: grid; grid-template-columns: minmax(0, 1fr); border-radius: 18px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.sky-more-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); min-width: 0; }
+.sky-more-row:last-child { border-bottom: 0; }
+.sky-more-row small { flex-shrink: 0; max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.sky-more-row.done .grow { color: var(--muted); text-decoration: line-through; }
+.sky-more-chk { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--oc); color: #a35b00; }
+.sky-more-row.done .sky-more-chk { background: radial-gradient(circle, #fffbe6, #fde68a 60%, #f59e0b); border-color: #f59e0b; }
+.sky-add { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--text-2); }
+.sky-bar { display: block; height: 5px; margin: 6px 0 2px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.sky-bar i { display: block; height: 100%; background: var(--sc); border-radius: 3px; }
+.lx .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

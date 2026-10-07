@@ -1,0 +1,199 @@
+/* ================= Journey (the day as a trail map) ================= */
+.lx-jm {
+  --jm-bg: #0d1626; --jm-land: #13213a; --jm-land2: #182a47; --jm-card: rgba(20, 33, 56, .9); --jm-card2: rgba(28, 44, 72, .95); --jm-line: rgba(201, 168, 106, .22);
+  --jm-text: #ece4cf; --jm-dim: #9aa3b5; --jm-path: #c9a86a; --jm-gold: #e6c27a; --jm-ink: #1a1306;
+  --jm-wall: #2b3a55; --jm-win-off: #1a2436; --jm-win-on: #ffd66b; --jm-door: #4b3a2a;
+  --jm-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  color: var(--jm-text);
+  background:
+    radial-gradient(42% 16% at 82% 22%, var(--jm-land2), transparent 72%),
+    radial-gradient(50% 14% at 6% 48%, var(--jm-land2), transparent 72%),
+    radial-gradient(46% 14% at 92% 70%, var(--jm-land2), transparent 72%),
+    radial-gradient(52% 12% at 10% 90%, var(--jm-land2), transparent 72%),
+    linear-gradient(180deg, var(--jm-land), var(--jm-bg) 30%);
+  background-attachment: local;
+}
+:root[data-theme='light'] .lx-jm {
+  --jm-bg: #eadfc2; --jm-land: #e3d6b4; --jm-land2: #d6dcb0; --jm-card: rgba(255, 250, 236, .92); --jm-card2: #fffaf0; --jm-line: rgba(120, 86, 40, .22);
+  --jm-text: #3a2e1c; --jm-dim: #7b6b52; --jm-path: #9a6a36; --jm-gold: #9a6410; --jm-ink: #fffaf0;
+  --jm-wall: #f3e8cf; --jm-win-off: #8d8170; --jm-win-on: #ffc531; --jm-door: #8a5a32;
+  background:
+    radial-gradient(42% 16% at 82% 22%, #cfdcae, transparent 72%),
+    radial-gradient(50% 14% at 6% 48%, #c6d9b0, transparent 72%),
+    radial-gradient(40% 12% at 90% 70%, #b9d3d9, transparent 72%),
+    radial-gradient(52% 12% at 10% 90%, #d2dcae, transparent 72%),
+    #eadfc2;
+  background-attachment: local;
+}
+
+/* cartouche */
+.jm-cart { position: relative; margin: 0 -16px; padding: calc(var(--safe-top) + 14px) 16px 16px; margin-top: calc(-1 * (var(--safe-top) + 12px)); border-bottom: 2px solid var(--jm-line); overflow: hidden; }
+.jm-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #1c2b55, #3b3a74 60%, #6d4b7d); }
+:root[data-theme='light'] .jm-sky { background: linear-gradient(180deg, #8ecdf2, #c7e6f6 60%, #f3e2c0); }
+.lx-jm.night .jm-sky { background: linear-gradient(180deg, #070c1f, #172350 60%, #2e2a5a); }
+.jm-sun { position: absolute; top: 18%; width: 46px; height: 46px; margin-left: -23px; border-radius: 50%; background: radial-gradient(circle, #fff6cf, #ffd36b 50%, rgba(255,200,90,0) 72%); }
+.jm-sun.moon { background: radial-gradient(circle, #f7f6ff, #c9cbf2 45%, rgba(190,190,255,0) 72%); }
+.jm-hills { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 70px; }
+.jm-hills .hl2 { fill: #233b3a; } .jm-hills .hl1 { fill: var(--jm-land); }
+:root[data-theme='light'] .jm-hills .hl2 { fill: #a9c98e; }
+.jm-cart-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #fff; }
+:root[data-theme='light'] .jm-cart-row { color: #2a2214; }
+.jm-eyebrow { font-size: 11.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: .8; }
+.jm-title { margin: 3px 0 0; font-family: var(--jm-serif); font-size: 27px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,.18); }
+.jm-avatar { position: relative; flex-shrink: 0; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.55); backdrop-filter: blur(6px); }
+.jm-avatar > :first-child { margin-top: 6px; }
+.jm-avatar b { position: absolute; right: -4px; top: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--jm-gold); color: var(--jm-ink); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.jm-trail { position: relative; margin-top: 52px; }
+.jm-trail-bar { position: relative; display: block; height: 8px; border-radius: 6px; background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--jm-path) 45%, transparent) 0 8px, transparent 8px 13px); }
+.jm-trail-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--jm-path); }
+.jm-trail-bar b { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--jm-gold); border: 3px solid var(--jm-card2); box-shadow: 0 0 0 2px var(--jm-gold); }
+.jm-trail-l { display: block; margin-top: 8px; font-size: 12.5px; color: var(--jm-dim); }
+.jm-trail-l b { font-family: var(--jm-serif); font-size: 18px; color: var(--jm-text); }
+.jm-badges { position: relative; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.jm-badges span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 700; background: var(--jm-card); border: 1px solid var(--jm-line); color: var(--jm-dim); }
+
+/* the trail */
+.jm-map { position: relative; margin-top: 4px; }
+.jm-start { width: 56px; height: 22px; position: relative; }
+.jm-start::after { content: ''; position: absolute; left: 26.5px; top: 0; bottom: 0; border-left: 3px dashed var(--jm-path); }
+.jm-place { position: relative; display: flex; gap: 10px; align-items: stretch; }
+.jm-place.right { flex-direction: row-reverse; }
+.jm-rail { position: relative; flex-shrink: 0; width: 56px; }
+.jm-rail::after { content: ''; position: absolute; left: 26.5px; top: 58px; bottom: 0; border-left: 3px dashed var(--jm-path); }
+.jm-place.last .jm-rail::after { display: none; }
+.jm-pin { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: var(--pc); background: radial-gradient(circle at 35% 30%, var(--jm-card2), var(--jm-card)); border: 3px solid var(--pc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pc) 18%, transparent), 0 8px 16px rgba(0,0,0,.25); }
+.jm-you { position: relative; z-index: 1; width: 56px; display: flex; flex-direction: column; align-items: center; }
+.jm-you-kai { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle, color-mix(in srgb, var(--jm-gold) 35%, transparent), transparent 70%); animation: jmBob 2.2s ease-in-out infinite; }
+@keyframes jmBob { 50% { transform: translateY(-4px); } }
+.jm-you small { margin-top: 2px; padding: 1px 6px; border-radius: 6px; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; background: var(--jm-gold); color: var(--jm-ink); }
+.jm-body { flex: 1; min-width: 0; padding: 6px 0 12px; }
+.jm-name { display: flex; flex-direction: column; margin-bottom: 10px; }
+.jm-name > span { display: flex; align-items: center; gap: 8px; font-family: var(--jm-serif); font-size: 20px; font-weight: 700; font-style: italic; line-height: 1.15; }
+.jm-name small { font-size: 12.5px; color: var(--jm-dim); margin-top: 2px; }
+.jm-place.right .jm-name { align-items: flex-end; text-align: right; }
+.jm-place.right .jm-name > span { justify-content: flex-end; }
+.jm-more { display: inline-flex; align-items: center; gap: 1px; font-family: var(--font); font-style: normal; font-size: 12px; font-weight: 700; color: var(--jm-gold) !important; }
+.jm-link { position: relative; height: 46px; }
+.jm-link i { position: absolute; border: 0 dashed var(--jm-path); }
+.jm-link.from-left i:first-child { left: 26.5px; width: calc(50% - 26.5px); top: 0; height: 25px; border-left-width: 3px; border-bottom-width: 3px; border-bottom-left-radius: 22px; }
+.jm-link.from-left i:last-child { left: calc(50% - .5px); right: 26.5px; top: 22px; bottom: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 22px; }
+.jm-link.from-right i:first-child { right: 26.5px; width: calc(50% - 26.5px); top: 0; height: 25px; border-right-width: 3px; border-bottom-width: 3px; border-bottom-right-radius: 22px; }
+.jm-link.from-right i:last-child { right: calc(50% - .5px); left: 26.5px; top: 22px; bottom: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 22px; }
+
+/* shared bits */
+.jm-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.jm-quiet { font-size: 13.5px; color: var(--jm-dim); font-style: italic; }
+.jm-mini { display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--jm-line); overflow: hidden; }
+.jm-mini i { display: block; height: 100%; background: var(--bc); }
+.jm-sign { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px; width: 100%; padding: 11px 12px; border-radius: 6px 14px 14px 6px; background: var(--jm-card); border: 1px solid var(--jm-line); border-left: 4px solid var(--jm-gold); text-align: left; }
+.jm-sign b { font-size: 14.5px; } .jm-sign small { grid-column: 1; font-size: 12px; color: var(--jm-dim); } .jm-sign svg { grid-row: 1 / span 2; grid-column: 2; }
+.jm-sign.glw { border-left-color: var(--sleep); box-shadow: 0 0 22px color-mix(in srgb, var(--sleep) 25%, transparent); }
+.jm-build-new { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 11px; border-radius: 14px; border: 1.5px dashed var(--jm-line); color: var(--jm-dim) !important; font-size: 13px; font-weight: 700; }
+
+/* intention stone */
+.jm-stone { padding: 14px 16px; border-radius: 26px 30px 12px 14px; background: linear-gradient(160deg, #a8a29e, #78716c); color: #fafaf9; font-family: var(--jm-serif); font-style: italic; font-weight: 700; font-size: 16px; line-height: 1.35; text-shadow: 0 -1px 0 rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.15); box-shadow: inset 0 -6px 10px rgba(0,0,0,.25), 0 8px 14px rgba(0,0,0,.2); }
+
+/* now / next signposts */
+.jm-road { display: grid; gap: 7px; width: 100%; text-align: left; }
+.jm-post { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 8px; }
+.jm-post-t { font-size: 12px; font-weight: 800; color: var(--jm-dim); text-align: right; }
+.jm-post.now .jm-post-t { color: var(--jm-gold); text-transform: uppercase; }
+.jm-post-arrow { position: relative; display: flex; align-items: center; gap: 7px; min-width: 0; padding: 8px 18px 8px 10px; background: var(--jm-card); border: 1px solid var(--jm-line); border-left: 3px solid var(--ac); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); font-size: 13.5px; font-weight: 650; color: var(--jm-text); }
+.jm-post-arrow > svg { flex-shrink: 0; color: var(--ac); }
+.jm-post.now .jm-post-arrow { background: color-mix(in srgb, var(--ac) 18%, var(--jm-card)); }
+.jm-weather { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; color: var(--jm-dim); }
+
+/* habit village */
+.jm-village { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 6px; }
+.jm-home { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.jm-home-b { width: 64px; height: 60px; }
+.jm-home-b:active { transform: scale(.9); }
+.jm-house { width: 64px; height: 60px; overflow: visible; }
+.jm-roof { fill: var(--hc); stroke: color-mix(in srgb, var(--hc) 60%, #000); stroke-width: 1.5; stroke-linejoin: round; }
+.jm-house:not(.lit) .jm-roof { fill: color-mix(in srgb, var(--hc) 45%, var(--jm-wall)); }
+.jm-wall { fill: var(--jm-wall); stroke: rgba(0,0,0,.25); stroke-width: 1; }
+.jm-chim { fill: color-mix(in srgb, var(--jm-wall) 70%, #000); }
+.jm-win { fill: var(--jm-win-off); transition: fill .4s, filter .4s; }
+.jm-house.lit .jm-win { fill: var(--jm-win-on); filter: drop-shadow(0 0 5px var(--jm-win-on)); }
+.jm-door { fill: var(--jm-door); }
+.jm-build { fill: var(--hc); }
+.jm-smoke circle { fill: rgba(220,220,230,.55); animation: jmSmoke 2.4s ease-out infinite; }
+.jm-smoke circle:last-child { animation-delay: .8s; }
+@keyframes jmSmoke { from { transform: translateY(4px); opacity: .9; } to { transform: translate(4px, -10px); opacity: 0; } }
+.jm-house.jflash { animation: jmPop .6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes jmPop { 40% { transform: scale(1.18) translateY(-3px); } }
+.jm-home-n { display: flex; flex-direction: column; align-items: center; width: 100%; min-width: 0; margin-top: 2px; }
+.jm-home-n b { max-width: 100%; font-size: 12.5px; font-weight: 750; text-align: center; }
+.jm-home-n small { max-width: 100%; font-size: 10.5px; color: var(--jm-dim); text-align: center; }
+
+/* task camp */
+.jm-task { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px 8px 8px; border-radius: 14px; background: var(--jm-card); border: 1px solid var(--jm-line); text-align: left; }
+.jm-task b { display: block; font-size: 14.5px; font-weight: 650; }
+.jm-task small { display: flex; flex-wrap: wrap; gap: 0 8px; margin-top: 1px; font-size: 11.5px; color: var(--jm-dim); }
+.jm-task small em { font-style: normal; font-weight: 800; text-transform: capitalize; }
+.jm-task .p-high { color: #f87171; } .jm-task .p-medium { color: #fbbf24; } .jm-task .p-low { color: #60a5fa; } .jm-task .late { color: #f87171; }
+.jm-task.done b { text-decoration: line-through; color: var(--jm-dim); }
+.jm-tent-b { flex-shrink: 0; width: 44px; height: 40px; }
+.jm-tent { width: 44px; height: 40px; overflow: visible; }
+.jm-canvas { fill: color-mix(in srgb, var(--task) 55%, var(--jm-wall)); stroke: color-mix(in srgb, var(--task) 60%, #000); stroke-width: 1.4; stroke-linejoin: round; }
+.jm-flap { fill: color-mix(in srgb, var(--task) 30%, #000); opacity: .55; }
+.jm-pole { stroke: var(--jm-dim); stroke-width: 1.6; }
+.jm-flag { fill: var(--jm-dim); transform-origin: 24px 8px; transform: translateY(5px) scaleY(.7); transition: transform .45s cubic-bezier(.3,1.6,.5,1), fill .3s; }
+.jm-tent.up .jm-flag { fill: #f43f5e; transform: none; animation: jmWave 1.2s ease-in-out infinite; }
+@keyframes jmWave { 50% { transform: skewY(-8deg) scaleX(.9); } }
+.jm-task.jflash .jm-tent { animation: jmPop .6s cubic-bezier(.3,1.6,.5,1); }
+.jm-friend { flex-shrink: 0; width: 40px; height: 40px; margin: 0 2px; border-radius: 50%; display: grid; place-items: center; color: var(--fc); background: color-mix(in srgb, var(--fc) 18%, transparent); border: 2px solid color-mix(in srgb, var(--fc) 50%, transparent); }
+
+/* arena / library / lab */
+.jm-arena { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px; border-radius: 14px; background: linear-gradient(110deg, color-mix(in srgb, var(--fit) 20%, var(--jm-card)), var(--jm-card) 70%); border: 1px solid color-mix(in srgb, var(--fit) 40%, var(--jm-line)); text-align: left; }
+.jm-drill { display: inline-block; margin: 2px 8px 2px 0; font-size: 14px; font-weight: 650; }
+.jm-drill em { font-style: normal; font-size: 11px; font-weight: 800; color: var(--fit); }
+.jm-go { flex-shrink: 0; padding: 8px 14px; border-radius: 12px; background: var(--fit); color: #1d0a00; font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+.jm-arena.done .jm-go { background: transparent; color: var(--good); border: 1.5px solid currentColor; }
+.jm-book { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--jm-card); border: 1px solid var(--jm-line); text-align: left; }
+.jm-book-ic { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--bc); background: color-mix(in srgb, var(--bc) 18%, transparent); }
+.jm-book small, .jm-exp small { display: block; font-size: 11.5px; color: var(--jm-dim); }
+.jm-book b, .jm-exp b { display: block; font-size: 14.5px; font-weight: 650; }
+.jm-exp { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--jm-card); border: 1px solid var(--jm-line); text-align: left; }
+.jm-tag { flex-shrink: 0; padding: 5px 10px; border-radius: 10px; font-size: 11.5px; font-weight: 800; background: color-mix(in srgb, var(--mood) 20%, transparent); color: var(--mood); }
+.jm-tag.ok { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+
+/* market */
+.jm-market { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jm-stall { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 22px 12px 12px; border-radius: 4px 4px 14px 14px; background: var(--jm-card); border: 1px solid var(--jm-line); text-align: left; min-width: 0; overflow: hidden; }
+.jm-stall::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: repeating-linear-gradient(90deg, var(--sc) 0 14px, color-mix(in srgb, var(--sc) 35%, var(--jm-card2)) 14px 28px); -webkit-mask: radial-gradient(circle at 7px 10px, transparent 0, #000 0) 0 0 / 14px 10px; }
+.jm-stall > svg { color: var(--sc); }
+.jm-stall b { font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jm-stall small { font-size: 11.5px; color: var(--jm-dim); }
+.jm-stall.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; }
+.jm-stall.wide b { display: block; font-size: 15px; }
+.jm-stall.wide small { display: block; }
+
+/* summit */
+.jm-summit { display: grid; gap: 10px; }
+.jm-mtn { position: relative; height: 120px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, color-mix(in srgb, var(--money) 14%, var(--jm-card)), var(--jm-card)); border: 1px solid var(--jm-line); }
+.jm-mtn svg { position: absolute; inset: 12px 0 0 0; width: 100%; height: calc(100% - 12px); }
+.jm-rock { fill: color-mix(in srgb, var(--jm-dim) 55%, var(--jm-card2)); }
+.jm-snow { fill: #fff; opacity: .85; }
+.jm-flagpin { position: absolute; width: 0; height: 0; }
+.jm-flagpin::before { content: ''; position: absolute; left: 0; bottom: 0; width: 2px; height: 22px; background: var(--jm-text); }
+.jm-flagpin i { position: absolute; left: 2px; bottom: 10px; width: 18px; height: 12px; display: grid; place-items: center; font-style: normal; font-size: 9px; font-weight: 900; color: #1a1306; background: var(--gc); clip-path: polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%); animation: jmWave 1.6s ease-in-out infinite; transform-origin: left center; }
+.jm-goal { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--jm-card); border: 1px solid var(--jm-line); text-align: left; }
+.jm-gnum { flex-shrink: 0; width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #1a1306; background: var(--gc); }
+.jm-goal b { display: block; font-size: 14.5px; font-weight: 650; }
+.jm-goal small { display: block; font-size: 11.5px; color: var(--jm-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jm-gpct { flex-shrink: 0; font-family: var(--jm-serif); font-size: 17px; font-weight: 700; color: var(--gc); }
+
+/* compass (quick add) */
+.jm-fab { position: absolute; right: 18px; bottom: calc(var(--nav-h) + var(--safe-bottom) + 18px); z-index: 20; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: var(--jm-ink) !important; background: radial-gradient(circle at 35% 30%, #fff1c7, var(--jm-gold) 60%, #8a6420); border: 3px solid var(--jm-card2); box-shadow: 0 0 0 2px var(--jm-gold), 0 10px 22px rgba(0,0,0,.3); }
+.jm-fab-ic { animation: jmNeedle 6s ease-in-out infinite; }
+@keyframes jmNeedle { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(14deg); } }
+.jm-fab:active { transform: scale(.9); }
+.lx-jm .sheet { background: var(--jm-card2); color: var(--jm-text); }
+.lx-jm .sheet-title { font-family: var(--jm-serif); font-style: italic; }
+.jm-qa .qa-tile { background: var(--jm-card); border: 1px solid var(--jm-line); border-radius: 50% 50% 14px 14px; }
+
+.lx-jm.night .jm-cart { --jm-text: #f1ece0; --jm-dim: #b9bfd0; }
+.lx-jm.night .jm-cart-row { color: #fff; }
+.lx-jm.night .jm-hills .hl2 { fill: #1d2f3a; }
+:root[data-theme='light'] .lx-jm.night .jm-hills .hl1 { fill: #e3d6b4; }
