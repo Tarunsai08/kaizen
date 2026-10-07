@@ -23,11 +23,11 @@ import { MoodDetailSheet } from './Today';
 
 export const TODAY_LAYOUTS = [
   { value: 'classic', label: 'Classic' },
-  { value: 'bento', label: 'Widgets' },
-  { value: 'focus', label: 'Focus' },
-  { value: 'timeline', label: 'Timeline' },
-  { value: 'checklist', label: 'Checklist' },
-  { value: 'sky', label: 'Sky' },
+  { value: 'sky', label: 'Night sky' },
+  { value: 'garden', label: 'Garden' },
+  { value: 'ocean', label: 'Reef' },
+  { value: 'city', label: 'Skyline' },
+  { value: 'rocket', label: 'Launch' },
 ];
 
 /* ============================================================ shared data + actions */
@@ -228,451 +228,287 @@ export function YesterdayPrompt() {
 }
 
 /* ============================================================ 1 · Widgets (bento) */
-export function TodayBento() {
-  const { push, goTab, settings } = useApp();
-  const D = useTodayData();
-  const A = useTodayActions();
-  const { ready, data: subs } = useStudy();
-  const st = useStudyToday();
-  if (!D) return <div className="screen" />;
-  const { t, day } = D;
-  const nextStudy = ready ? subs.find((d) => d.s.active !== false && d.next) : null;
-  const nn = D.nn.cur || D.nn.next[0];
-  const hDone = D.due.filter((x) => x.done).length;
-  const lvl = D.xp?.total;
-  return (
-    <div className="screen fade-in tlx">
-      <div className="tl-head">
-        <div><div className="eyebrow">{dateLabel(t)}</div><h1 className="h1 mt-4">{greeting()}{settings.name ? `, ${settings.name}` : ''}</h1></div>
-        <Avatar D={D} />
-      </div>
-      <div className="bento">
-        <div className="bt bt-score" style={{ gridColumn: 'span 2', gridRow: 'span 2' }}>
-          <MultiRing rings={day.rings.map((r) => ({ value: r.value ?? 0, color: r.value == null ? 'var(--faint)' : r.color }))} size={118} stroke={9} gap={3} />
-          <div className="bt-score-n"><b className="num">{day.score}</b><small>day score</small></div>
-        </div>
-        <div className="bt" style={{ gridColumn: 'span 2', '--bc': 'var(--fit)' }}>
-          <div className="bt-k"><Flame size={14} /> Streak</div>
-          <div className="bt-v num">{D.streak}<small> day{D.streak === 1 ? '' : 's'}</small></div>
-        </div>
-        <button className="bt" style={{ gridColumn: 'span 2', '--bc': 'var(--accent)' }} onClick={() => push('CompanionScreen')}>
-          <div className="bt-k"><Star size={14} /> Level {lvl?.level || 1}</div>
-          <div className="bt-bar"><i style={{ width: `${(lvl?.progress || 0) * 100}%` }} /></div>
-          <div className="bt-s">+{D.xp?.today || 0} XP today</div>
-        </button>
-
-        {(D.prompts.yesterday || D.prompts.morning || D.prompts.night) && <div style={{ gridColumn: 'span 4' }}><Prompts D={D} /></div>}
-
-        <button className="bt bt-wide" style={{ gridColumn: 'span 4', '--bc': nn?.color || 'var(--task)' }} onClick={() => goTab('plan')}>
-          <span className="bt-ico"><HIcon icon={nn?.icon || 'i:Clock'} size={18} color={nn?.color || 'var(--task)'} /></span>
-          <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
-            <span className="bt-k">{D.nn.cur ? 'Now' : 'Next'}{nn ? ` · ${fmtHM(nn.start)}` : ''}</span>
-            <span className="bt-t ellipsis">{nn ? nn.title : 'Nothing else planned — enjoy the space'}</span>
-          </span>
-          <ChevronRight size={18} className="muted" />
-        </button>
-
-        <div className="bt" style={{ gridColumn: 'span 4', '--bc': 'var(--mood)' }}>
-          <div className="row between"><div className="bt-k"><Smile size={14} /> How are you feeling?</div>{D.lastMood && <span className="bt-s">logged</span>}</div>
-          <div className="mt-8"><MoodScale value={null} onChange={(v) => A.quickMood(v, t)} size={30} /></div>
-        </div>
-
-        <div className="bt bt-top" style={{ gridColumn: 'span 2', gridRow: 'span 2', '--bc': 'var(--habit)' }}>
-          <div className="row between"><div className="bt-k">Habits</div><span className="bt-s num">{hDone}/{D.due.length}</span></div>
-          <div className="bt-habits">
-            {D.due.slice(0, 6).map((x) => <HabitDot key={x.h.id} x={x} size={42} onTap={() => A.logHabit(x, t)} />)}
-            {!D.due.length && <button className="bt-s" onClick={() => push('HabitForm', {})}>+ Add a habit</button>}
-          </div>
-        </div>
-        <div className="bt bt-top" style={{ gridColumn: 'span 2', gridRow: 'span 2', '--bc': 'var(--task)' }}>
-          <div className="row between"><div className="bt-k">Tasks</div><button className="bt-s" onClick={() => push('TaskForm', { due: t })}>+ add</button></div>
-          <div className="col gap-6 mt-8">
-            {D.todayTasks.slice(0, 4).map((x) => (
-              <button key={x.id} className={`bt-task ${x.done ? 'done' : ''}`} onClick={() => A.toggleTask(x)}>
-                <i>{x.done && <Check size={11} strokeWidth={3.5} />}</i><span className="ellipsis">{x.title}</span>
-              </button>
-            ))}
-            {!D.todayTasks.length && <span className="bt-s">Nothing due today</span>}
-          </div>
-        </div>
-
-        {nextStudy && (
-          <button className="bt" style={{ gridColumn: 'span 2', '--bc': nextStudy.s.color }} onClick={() => push('Lesson', { sid: nextStudy.s.sid, id: nextStudy.next.id })}>
-            <div className="bt-k"><GraduationCap size={14} /> {nextStudy.s.title}</div>
-            <div className="bt-t2">{nextStudy.next.title}</div>
-          </button>
-        )}
-        <button className="bt" style={{ gridColumn: nextStudy ? 'span 2' : 'span 4', '--bc': 'var(--task)' }} onClick={() => (st?.due ? push('ReviewDeck') : goTab('study'))}>
-          <div className="bt-k"><Brain size={14} /> Revise</div>
-          <div className="bt-v num">{st?.due || 0}<small> card{st?.due === 1 ? '' : 's'}</small></div>
-        </button>
-        <button className="bt" style={{ gridColumn: 'span 2', '--bc': 'var(--money)' }} onClick={() => push('MoneyScreen')}>
-          <div className="bt-k"><Wallet size={14} /> Spent today</div>
-          <div className="bt-v num">{money(D.spent, settings.currency)}</div>
-        </button>
-        <button className="bt" style={{ gridColumn: 'span 2', '--bc': 'var(--bored)' }} onClick={() => push('Boredom')}>
-          <div className="bt-k"><Wind size={14} /> I’m bored</div>
-          <div className="bt-t2">Pick something on purpose</div>
-        </button>
-        <button className="bt bt-wide" style={{ gridColumn: 'span 4', '--bc': 'var(--accent)' }} onClick={() => push('Insights')}>
-          <span className="bt-ico"><Sparkles size={18} color="var(--accent)" /></span>
-          <span className="grow" style={{ textAlign: 'left' }}><span className="bt-k">Insights</span><span className="bt-t">Patterns across your days</span></span>
-          <ChevronRight size={18} className="muted" />
-        </button>
-      </div>
-      <QuickAddFab t={t} />
-      <MoodDetailSheet state={A.moodSheet} onClose={() => A.setMoodSheet(null)} emotions={settings.emotions} />
-    </div>
-  );
-}
-
-/* ============================================================ 2 · Focus (one card at a time) */
-export function TodayFocus() {
-  const { push, goTab, settings } = useApp();
-  const D = useTodayData();
-  const A = useTodayActions();
-  const { ready, data: subs } = useStudy();
-  const st = useStudyToday();
-  const [later, setLater] = useState([]);
-  const [drag, setDrag] = useState(0);
-  const [leaving, setLeaving] = useState(0);
-  const start = useRef(null);
-  if (!D) return <div className="screen" />;
-  const { t } = D;
-  const q = [];
-  if (D.prompts.yesterday) q.push({ key: 'y', kind: 'Close yesterday', title: 'Night review for yesterday', sub: 'You stayed up — two minutes to close it properly.', icon: 'i:Moon', color: 'var(--sleep)', cta: 'Review', run: () => push('NightReview') });
-  if (D.prompts.morning) q.push({ key: 'm', kind: 'Good morning', title: 'Morning check-in', sub: 'Log your wake time and set today’s intention.', icon: 'i:Sunrise', color: 'var(--goal)', cta: 'Check in', run: () => push('Morning') });
-  D.todayTasks.filter((x) => !x.done && (x.priority === 'high' || x.due < t)).forEach((x) => q.push({ key: 't' + x.id, kind: x.due < t ? 'Overdue task' : 'Priority', title: x.title, sub: x.dueTime ? `Planned for ${fmtHM(x.dueTime)}` : 'Your top priority today', icon: 'i:Target', color: 'var(--task)', cta: 'Mark done', run: () => A.toggleTask(x), open: () => push('TaskForm', { id: x.id }) }));
-  D.due.filter((x) => !x.done).forEach((x) => q.push({ key: 'h' + x.h.id, kind: `Habit · ${x.amt}/${x.target}${x.h.unit ? ' ' + x.h.unit : ''}`, title: x.h.name, sub: x.h.reminderTime ? `Usually at ${fmtHM(x.h.reminderTime)}` : 'Any time today', icon: x.h.icon, color: x.color, prog: x.target > 1 ? x.amt / x.target : null, cta: x.target > 1 ? `Log +${x.h.step || 1}` : 'Done', run: () => A.logHabit(x, t), stay: x.amt + (x.h.step || 1) < x.target, open: () => push('HabitDetail', { id: x.h.id }) }));
-  D.todayTasks.filter((x) => !x.done && !(x.priority === 'high' || x.due < t)).forEach((x) => q.push({ key: 't' + x.id, kind: 'Task', title: x.title, sub: x.dueTime ? `Planned for ${fmtHM(x.dueTime)}` : 'Due today', icon: 'i:CheckCircle2', color: 'var(--task)', cta: 'Mark done', run: () => A.toggleTask(x), open: () => push('TaskForm', { id: x.id }) }));
-  const ns = ready ? subs.find((d) => d.s.active !== false && d.next) : null;
-  if (ns) q.push({ key: 's' + ns.next.id, kind: `Study · ${ns.s.title}`, title: ns.next.title, sub: ns.nextPath.map((p) => p.title).join(' › '), icon: ns.s.icon || 'i:GraduationCap', color: ns.s.color, cta: 'Start lesson', run: () => push('Lesson', { sid: ns.s.sid, id: ns.next.id }) });
-  if (st?.due) q.push({ key: 'rev', kind: 'Revise', title: `${st.due} card${st.due > 1 ? 's' : ''} to recall`, sub: 'A couple of minutes keeps it in memory.', icon: 'i:Brain', color: 'var(--task)', cta: 'Revise', run: () => push('ReviewDeck') });
-  if (!D.lastMood) q.push({ key: 'mood', kind: 'Check in', title: 'How are you feeling?', sub: 'One tap is enough.', icon: 'i:Smile', color: 'var(--mood)', mood: true });
-  if (D.prompts.night) q.push({ key: 'n', kind: 'Evening', title: 'Night review', sub: 'Close the day and plan tomorrow’s top 3.', icon: 'i:Moon', color: 'var(--sleep)', cta: 'Review', run: () => push('NightReview') });
-  const ordered = [...q.filter((x) => !later.includes(x.key)), ...q.filter((x) => later.includes(x.key))];
-  const top0 = ordered[0];
-  const fresh = top0 && top0.key.startsWith('h') ? D.due.find((x) => 'h' + x.h.id === top0.key) : null;
-  const top = fresh && top0 ? { ...top0, prog: fresh.amt / fresh.target, kind: `Habit · ${fresh.amt}/${fresh.target}${fresh.h.unit ? ' ' + fresh.h.unit : ''}` } : top0;
-  const pct = D.totalCount ? D.doneCount / D.totalCount : 0;
-
-  const finish = (dir) => {
-    if (!top) return;
-    setLeaving(dir);
-    setTimeout(async () => {
-      if (dir > 0 && top.run) { const r = await top.run(); if (top.stay && r === 'step') { setLeaving(0); setDrag(0); return; } }
-      if (dir < 0) setLater((l) => [...l.filter((k) => k !== top.key), top.key]);
-      setLeaving(0); setDrag(0);
-    }, 260);
+/* ============================================================ scene heroes
+   Each creative layout = an interactive scene (replaces the classic header + score card)
+   followed by everything from the classic Today screen. */
+function useSceneItems(D, A, max = 12) {
+  const [burst, setBurst] = useState(null);
+  const items = [
+    ...D.due.map((x) => ({ key: 'h' + x.h.id, done: x.done, prog: Math.min(1, x.amt / x.target), icon: x.h.icon, color: x.color, label: x.h.name, sub: x.target > 1 ? `${x.amt}/${x.target}` : '', act: () => A.logHabit(x, D.t) })),
+    ...D.todayTasks.map((x) => ({ key: 't' + x.id, done: x.done, prog: x.done ? 1 : 0, icon: 'i:CheckCircle2', color: 'var(--task)', label: x.title, sub: 'task', task: true, act: () => A.toggleTask(x) })),
+  ].slice(0, max);
+  const tapItem = async (o) => {
+    const r = await o.act();
+    if (!o.done && (r === 'complete' || o.task)) { setBurst(o.key); setTimeout(() => setBurst(null), 1000); }
+    else if (r === 'step') { setBurst(o.key + ':s'); setTimeout(() => setBurst(null), 600); }
   };
-  const down = (e) => { start.current = e.clientX; };
-  const move = (e) => { if (start.current != null) setDrag(e.clientX - start.current); };
-  const up = () => { if (start.current == null) return; start.current = null; if (drag > 90 && !top?.mood) finish(1); else if (drag < -90) finish(-1); else setDrag(0); };
-  const style = leaving ? { transform: `translateX(${leaving * 420}px) rotate(${leaving * 14}deg)`, opacity: 0, transition: 'all .26s ease-in' } : { transform: `translateX(${drag}px) rotate(${drag / 22}deg)`, transition: start.current != null ? 'none' : 'transform .25s cubic-bezier(.2,.8,.2,1)' };
-
+  const lit = items.filter((o) => o.done).length;
+  return { items, tapItem, burst, lit, all: items.length > 0 && lit === items.length };
+}
+function SceneHeader({ D, title, light = true }) {
   return (
-    <div className="screen fade-in tlx">
-      <div className="tl-head">
-        <div><div className="eyebrow">{dateLabel(t)}</div><h1 className="h1 mt-4">One thing at a time</h1></div>
-        <Avatar D={D} />
-      </div>
-      <div className="fx-progress">
-        <div className="row between small"><span><b className="num">{D.doneCount}</b> of {D.totalCount} done today</span><span className="muted num">score {D.day.score}</span></div>
-        <div className="fx-bar"><i style={{ width: `${pct * 100}%` }} /></div>
-      </div>
-      {top ? (
-        <div className="fx-stack">
-          {ordered[2] && <div className="fx-card ghost g2" style={{ '--fc': ordered[2].color }} />}
-          {ordered[1] && <div className="fx-card ghost g1" style={{ '--fc': ordered[1].color }}><div className="fx-kind">{ordered[1].kind}</div></div>}
-          <div key={top.key} className="fx-card" style={{ '--fc': top.color, ...style }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
-            <div className="fx-glow" />
-            <div className="fx-kind">{top.kind}</div>
-            <div className="fx-icon"><HIcon icon={top.icon} size={34} color={top.color} /></div>
-            <h2 className="fx-title">{top.title}</h2>
-            <p className="fx-sub">{top.sub}</p>
-            {top.prog != null && <div className="fx-hprog"><i style={{ width: `${Math.min(1, top.prog) * 100}%` }} /></div>}
-            {top.mood ? (
-              <div className="mt-16" onPointerDown={(e) => e.stopPropagation()}><MoodScale value={null} onChange={(v) => { A.quickMood(v, t); setLater((l) => [...l, 'mood']); }} size={38} /></div>
-            ) : (
-              <div className="fx-actions" onPointerDown={(e) => e.stopPropagation()}>
-                <button className="fx-later" onClick={() => finish(-1)}><Clock size={16} /> Later</button>
-                <button className="fx-do" onClick={() => finish(1)}>{top.cta} <ArrowRight size={17} /></button>
-              </div>
-            )}
-            {top.open && <button className="fx-open" onPointerDown={(e) => e.stopPropagation()} onClick={top.open}>Details</button>}
-            {drag > 40 && !top.mood && <div className="fx-hint r">Done</div>}
-            {drag < -40 && <div className="fx-hint l">Later</div>}
-          </div>
-        </div>
-      ) : (
-        <div className="fx-clear">
-          <div className="float"><Companion stage={D.xp ? stageFor(D.xp.total.level).index : 0} mood="happy" size={130} /></div>
-          <h2 className="h1" style={{ fontSize: 26 }}>All clear</h2>
-          <p className="dim center" style={{ margin: 0 }}>Nothing is waiting on you right now. Rest, or pick something on purpose.</p>
-          <div className="row mt-16" style={{ width: '100%' }}><button className="btn grow" onClick={() => push('Boredom')}>I’m bored</button><button className="btn grow" onClick={() => goTab('study')}>Study</button></div>
-        </div>
-      )}
-      {ordered.length > 1 && (
-        <div className="fx-queue">
-          <div className="eyebrow mb-8">Coming up · {ordered.length - 1}</div>
-          {ordered.slice(1, 6).map((x) => (
-            <div key={x.key} className="fx-q"><span className="d" style={{ background: x.color }} /><span className="grow ellipsis">{x.title}</span><span className="tiny muted">{x.kind.split(' · ')[0]}</span></div>
-          ))}
-          {later.length > 0 && <button className="tiny muted mt-8 row gap-4" onClick={() => setLater([])}><RotateCcw size={12} /> Bring postponed back</button>}
-        </div>
-      )}
-      <QuickAddFab t={t} />
-      <MoodDetailSheet state={A.moodSheet} onClose={() => A.setMoodSheet(null)} emotions={settings.emotions} />
+    <div className="sc-head" style={{ color: light ? '#fff' : '#14130f' }}>
+      <div style={{ minWidth: 0 }}><div className="sc-eyebrow">{dateLabel(D.t)}</div><div className="sc-title">{title}</div></div>
+      <Avatar D={D} />
     </div>
   );
 }
-
-/* ============================================================ 3 · Timeline (the day on a sun arc) */
-export function TodayTimeline() {
-  const { push, settings } = useApp();
+function SceneStats({ D, S, label }) {
+  return (
+    <div className="sc-stats">
+      <div className="sc-stat"><b className="num">{D.day.score}</b><span>day score</span></div>
+      <div className="sc-stat"><b className="num">{S.lit}<small>/{S.items.length}</small></b><span>{label}</span></div>
+      <div className="sc-stat"><b className="num">{D.streak}<small>d</small></b><span>streak</span></div>
+      <div className="sc-stat"><b className="num">+{D.xp?.today || 0}</b><span>XP today</span></div>
+    </div>
+  );
+}
+function useScene() {
   const D = useTodayData();
   const A = useTodayActions();
-  const nowRef = useRef();
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => { if (D && !scrolled && nowRef.current) { setScrolled(true); setTimeout(() => nowRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300); } }, [!!D]);
-  if (!D) return <div className="screen" />;
-  const { t, timeline } = D;
-  const items = timeline.items;
-  const wakeMin = items.find((x) => x.kind === 'wake')?.startMin ?? hmToMin(settings.wakeTarget || '07:00');
-  const bedMin = items.find((x) => x.kind === 'bed')?.startMin ?? hmToMin(settings.bedtimeTarget || '23:00') + 1440 * (hmToMin(settings.bedtimeTarget || '23:00') < wakeMin ? 1 : 0);
-  const n = new Date();
-  let nowMin = n.getHours() * 60 + n.getMinutes();
-  if (nowMin < wakeMin - 60) nowMin += 1440;
-  const frac = Math.max(0, Math.min(1, (nowMin - wakeMin) / Math.max(60, bedMin - wakeMin)));
-  const ang = Math.PI * (1 - frac);
-  const sx = 150 + 130 * Math.cos(ang), sy = 140 - 120 * Math.sin(ang);
-  const night = nowMin >= bedMin || frac >= 1;
-  const anytime = D.due.filter((x) => !x.h.reminder || !x.h.reminderTime || x.h.intervalMins);
-  const untimed = timeline.inbox;
-  const habitByKey = Object.fromEntries(D.due.map((x) => ['h' + x.h.id, x]));
-  const act = (it) => {
-    if (it.kind === 'task') A.toggleTask(it.ref);
-    else if (it.kind === 'habit' && habitByKey[it.key]) A.logHabit(habitByKey[it.key], t);
-    else if (it.kind === 'workout') push('Workout', { date: t });
-    else if (it.kind === 'review') push('NightReview');
-    else if (it.kind === 'wake') push('Morning');
-  };
-  let nowPlaced = false;
-  const rows = [];
-  items.forEach((it, i) => {
-    if (!nowPlaced && it.startMin > nowMin) { nowPlaced = true; rows.push({ now: true }); }
-    const prev = items[i - 1];
-    const gap = prev ? Math.max(6, Math.min(44, (it.startMin - prev.startMin) / 6)) : 0;
-    const hx = habitByKey[it.key];
-    rows.push({ it, gap, done: it.kind === 'habit' ? !!hx?.done : it.done, past: it.endMin < nowMin });
-  });
-  if (!nowPlaced) rows.push({ now: true });
-  return (
-    <div className="screen fade-in tlx">
-      <div className="tl-head">
-        <div><div className="eyebrow">{dateLabel(t)}</div><h1 className="h1 mt-4">Your day</h1></div>
-        <Avatar D={D} />
-      </div>
-      <div className={`tm-arc ${night ? 'night' : ''}`}>
-        <svg viewBox="0 0 300 160" width="100%" height="150">
-          <defs><linearGradient id="arcg" x1="0" x2="1"><stop offset="0" stopColor="var(--goal)" /><stop offset="1" stopColor="var(--sleep)" /></linearGradient></defs>
-          <path d="M20 140 A130 120 0 0 1 280 140" fill="none" stroke="color-mix(in srgb, var(--text) 12%, transparent)" strokeWidth="3" strokeDasharray="2 7" strokeLinecap="round" />
-          <path d="M20 140 A130 120 0 0 1 280 140" fill="none" stroke="url(#arcg)" strokeWidth="4" strokeLinecap="round" pathLength="1" strokeDasharray={`${frac} 1`} />
-          <line x1="8" y1="140" x2="292" y2="140" stroke="color-mix(in srgb, var(--text) 12%, transparent)" />
-          <circle cx={sx} cy={sy} r="18" fill={night ? 'var(--sleep)' : 'var(--goal)'} opacity=".18" className="tm-sunglow" />
-          <circle cx={sx} cy={sy} r="10" fill={night ? 'var(--sleep)' : 'var(--goal)'} />
-        </svg>
-        <div className="tm-arc-l"><span>{fmtHM(items.find((x) => x.kind === 'wake')?.start || settings.wakeTarget)}</span><span className="c"><b className="num">{Math.round(frac * 100)}%</b> of your day · score <b className="num">{D.day.score}</b></span><span>{fmtHM(settings.bedtimeTarget)}</span></div>
-      </div>
-      <Prompts D={D} />
-      {(anytime.length > 0 || untimed.length > 0) && (
-        <div className="mt-16">
-          <div className="eyebrow mb-8">Any time today</div>
-          <div className="tm-any">
-            {anytime.map((x) => (
-              <button key={x.h.id} className={`tm-chip ${x.done ? 'done' : ''}`} style={{ '--hc': x.color }} onClick={() => A.logHabit(x, t)}>
-                <HIcon icon={x.h.icon} size={15} color={x.color} /><span>{x.h.name}</span>{x.target > 1 && <small className="num">{x.amt}/{x.target}</small>}{x.done && <Check size={13} strokeWidth={3} />}
-              </button>
-            ))}
-            {untimed.map((x) => (
-              <button key={x.id} className={`tm-chip ${x.done ? 'done' : ''}`} style={{ '--hc': 'var(--task)' }} onClick={() => A.toggleTask(x)}>
-                <CheckSquare size={15} color="var(--task)" /><span>{x.title}</span>{x.done && <Check size={13} strokeWidth={3} />}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="tm-line mt-16">
-        {rows.map((r, i) => r.now ? (
-          <div key="now" ref={nowRef} className="tm-now"><span className="num">{fmtHM(`${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`)}</span><i /></div>
-        ) : (
-          <div key={r.it.key} className={`tm-row ${r.done ? 'done' : ''} ${r.past && !r.done ? 'past' : ''}`} style={{ marginTop: r.gap, '--ic': r.it.color }}>
-            <div className="tm-time num">{fmtHM(r.it.start)}</div>
-            <div className="tm-pin"><i /></div>
-            <button className="tm-card" onClick={() => act(r.it)}>
-              <span className="tm-ico"><HIcon icon={r.it.icon} size={17} color={r.it.color} /></span>
-              <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
-                <span className="tm-t ellipsis">{r.it.title}</span>
-                <span className="tm-s">{r.it.dur ? `${r.it.dur} min` : r.it.sub || (r.it.kind === 'habit' ? 'Habit' : '')}</span>
-              </span>
-              <span className={`tm-check ${r.done ? 'on' : ''}`}>{r.done && <Check size={13} strokeWidth={3.5} />}</span>
-            </button>
-          </div>
-        ))}
-      </div>
-      <button className="btn block mt-16" onClick={() => push('TaskForm', { due: t, dueTime: `${String((n.getHours() + 1) % 24).padStart(2, '0')}:00`, duration: 30 })}><Plus size={17} /> Add a block</button>
-      <QuickAddFab t={t} />
-      <MoodDetailSheet state={A.moodSheet} onClose={() => A.setMoodSheet(null)} emotions={settings.emotions} />
-    </div>
-  );
+  return { D, A };
 }
 
-/* ============================================================ 4 · Checklist (calm, minimal) */
-export function TodayChecklist() {
-  const { push, goTab, settings } = useApp();
-  const D = useTodayData();
-  const A = useTodayActions();
-  const [draft, setDraft] = useState('');
-  if (!D) return <div className="screen" />;
-  const { t } = D;
-  const d = parse(t);
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const rows = [
-    ...D.due.map((x) => ({ key: 'h' + x.h.id, done: x.done, title: x.h.name, meta: x.target > 1 ? `${x.amt} / ${x.target}${x.h.unit ? ' ' + x.h.unit : ''}` : 'habit', color: x.color, act: () => A.logHabit(x, t), open: () => push('HabitDetail', { id: x.h.id }), prog: x.target > 1 ? x.amt / x.target : null })),
-    ...D.todayTasks.map((x) => ({ key: 't' + x.id, done: x.done, title: x.title, meta: [x.priority === 'high' ? 'priority' : null, x.due < t ? 'overdue' : null, x.dueTime ? fmtHM(x.dueTime) : null].filter(Boolean).join(' · ') || 'task', color: x.priority === 'high' ? 'var(--bad)' : 'var(--task)', act: () => A.toggleTask(x), open: () => push('TaskForm', { id: x.id }) })),
-  ];
-  const open = rows.filter((r) => !r.done);
-  const done = rows.filter((r) => r.done);
-  const add = async () => { if (!draft.trim()) return; await db.tasks.add({ title: draft.trim(), due: t, done: false, createdAt: Date.now(), subtasks: [], priority: 'none', recurrence: 'none' }); setDraft(''); tap(); };
-  const Row = ({ r }) => (
-    <div className={`ck-row ${r.done ? 'done' : ''}`} style={{ '--rc': r.color }}>
-      <button className="ck-box" onClick={r.act} aria-label={r.done ? 'Undo' : 'Complete'}>
-        {r.prog != null && !r.done ? <Ring size={30} stroke={3} value={r.prog} color={r.color} track="var(--surface-3)" /> : r.done ? <Check size={16} strokeWidth={3.2} /> : null}
-      </button>
-      <button className="ck-text" onClick={r.open}><span className="t">{r.title}</span><span className="m">{r.meta}</span></button>
-    </div>
-  );
-  return (
-    <div className="screen fade-in tlx ck">
-      <div className="tl-head" style={{ alignItems: 'flex-start' }}>
-        <div>
-          <div className="ck-day">{days[d.getDay()]}</div>
-          <div className="ck-date">{d.getDate()} {MONTHS[d.getMonth()]} · {open.length ? `${open.length} thing${open.length > 1 ? 's' : ''} left` : 'all done'}</div>
-        </div>
-        <Avatar D={D} />
-      </div>
-      {D.intention?.text && <p className="ck-intent">“{D.intention.text}”</p>}
-      <div className="ck-meter"><i style={{ width: `${D.totalCount ? (D.doneCount / D.totalCount) * 100 : 0}%` }} /></div>
-      <div className="mt-16"><Prompts D={D} /></div>
-      <div className="ck-list">
-        {open.map((r) => <Row key={r.key} r={r} />)}
-        <div className="ck-row add">
-          <span className="ck-box ghost"><Plus size={16} /></span>
-          <input className="ck-input" placeholder="Add a task for today" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} onBlur={add} />
-        </div>
-      </div>
-      {done.length > 0 && (
-        <>
-          <div className="ck-sep">Done · {done.length}</div>
-          <div className="ck-list">{done.map((r) => <Row key={r.key} r={r} />)}</div>
-        </>
-      )}
-      <div className="ck-mood">
-        <span className="small muted">Mood</span>
-        <MoodScale value={null} onChange={(v) => A.quickMood(v, t)} size={28} />
-      </div>
-      <div className="ck-links">
-        <button onClick={() => goTab('study')}>Study</button><span>·</span>
-        <button onClick={() => push('MoneyScreen')}>Money {D.spent ? money(D.spent, settings.currency) : ''}</button><span>·</span>
-        <button onClick={() => push('Boredom')}>Bored</button><span>·</span>
-        <button onClick={() => push('NightReview')}>Review</button>
-      </div>
-      <QuickAddFab t={t} />
-      <MoodDetailSheet state={A.moodSheet} onClose={() => A.setMoodSheet(null)} emotions={settings.emotions} />
-    </div>
-  );
-}
-
-/* ============================================================ 5 · Sky (light up your sky) */
+/* ---------- Sky: light up a star for everything you finish ---------- */
 const ORB_SPOTS = [[18, 34], [50, 22], [80, 36], [30, 56], [66, 54], [12, 72], [88, 70], [45, 42], [58, 72], [24, 18], [76, 16], [40, 68]];
 function skyFor(h) {
-  if (h < 5 || h >= 21) return { k: 'night', g: 'linear-gradient(180deg,#05071a 0%,#121a3d 55%,#28224d 100%)', hill: '#0d1330', hill2: '#151c40', text: '#e8ebff' };
-  if (h < 8) return { k: 'dawn', g: 'linear-gradient(180deg,#3b3a7a 0%,#c56a8f 50%,#f6b38a 100%)', hill: '#3a2d55', hill2: '#5b3f66', text: '#fff7f0' };
-  if (h < 17) return { k: 'day', g: 'linear-gradient(180deg,#3d8fe0 0%,#7cc0f2 55%,#c9e8fb 100%)', hill: '#2f8a5b', hill2: '#49a873', text: '#ffffff' };
-  return { k: 'dusk', g: 'linear-gradient(180deg,#2c2a6b 0%,#a8487a 50%,#f39a5b 100%)', hill: '#2c2347', hill2: '#4a2f55', text: '#fff4ec' };
+  if (h < 5 || h >= 21) return { k: 'night', g: 'linear-gradient(180deg,#05071a 0%,#121a3d 55%,#28224d 100%)', hill: '#0d1330', hill2: '#151c40' };
+  if (h < 8) return { k: 'dawn', g: 'linear-gradient(180deg,#3b3a7a 0%,#c56a8f 50%,#f6b38a 100%)', hill: '#3a2d55', hill2: '#5b3f66' };
+  if (h < 17) return { k: 'day', g: 'linear-gradient(180deg,#3d8fe0 0%,#7cc0f2 55%,#c9e8fb 100%)', hill: '#2f8a5b', hill2: '#49a873' };
+  return { k: 'dusk', g: 'linear-gradient(180deg,#2c2a6b 0%,#a8487a 50%,#f39a5b 100%)', hill: '#2c2347', hill2: '#4a2f55' };
 }
-export function TodaySky() {
-  const { push, goTab, settings } = useApp();
-  const D = useTodayData();
-  const A = useTodayActions();
-  const [burst, setBurst] = useState(null);
-  const { ready, data: subs } = useStudy();
-  if (!D) return <div className="screen" />;
-  const { t } = D;
+export function SkyHero() {
+  const { D, A } = useScene();
+  if (!D) return <div className="scene" style={{ height: 470 }} />;
+  return <SkyScene D={D} A={A} />;
+}
+function SkyScene({ D, A }) {
+  const S = useSceneItems(D, A, ORB_SPOTS.length);
   const n = new Date();
-  const S = skyFor(n.getHours());
-  const orbs = [
-    ...D.due.map((x) => ({ key: 'h' + x.h.id, done: x.done, prog: x.amt / x.target, icon: x.h.icon, color: x.color, label: x.h.name, act: () => A.logHabit(x, t) })),
-    ...D.todayTasks.map((x) => ({ key: 't' + x.id, done: x.done, prog: x.done ? 1 : 0, icon: 'i:CheckCircle2', color: 'var(--task)', label: x.title, act: () => A.toggleTask(x), task: true })),
-  ].slice(0, ORB_SPOTS.length);
-  const lit = orbs.filter((o) => o.done).length;
-  const allLit = orbs.length > 0 && lit === orbs.length;
+  const K = skyFor(n.getHours());
   const dayFrac = Math.max(0, Math.min(1, ((n.getHours() * 60 + n.getMinutes()) - 360) / (18 * 60)));
-  const sunX = 8 + dayFrac * 84, sunY = 30 - Math.sin(dayFrac * Math.PI) * 22;
-  const tapOrb = async (o, i) => {
-    const r = await o.act();
-    if (!o.done && (r === 'complete' || o.task)) { setBurst(i); setTimeout(() => setBurst(null), 900); }
-  };
-  const nn = D.nn.cur || D.nn.next[0];
-  const ns = ready ? subs.find((d) => d.s.active !== false && d.next) : null;
   return (
-    <div className="screen fade-in tlx sky-screen">
-      <div className={`sky ${S.k}`} style={{ background: S.g, color: S.text }}>
-        {(S.k === 'night' || S.k === 'dusk' || S.k === 'dawn') && <div className="sky-stars" />}
-        {allLit && <div className="sky-shoot" />}
-        <div className={`sky-sun ${S.k}`} style={{ left: `${sunX}%`, top: `${sunY}%` }} />
-        <div className="sky-head">
-          <div><div className="sky-eyebrow">{dateLabel(t)}</div><div className="sky-title">{allLit ? 'Your sky is full' : greeting()}</div></div>
-          <Avatar D={D} />
-        </div>
-        {orbs.map((o, i) => {
+    <>
+      <div className={`scene sky ${K.k}`} style={{ background: K.g }}>
+        {K.k !== 'day' && <div className="sky-stars" />}
+        {S.all && <div className="sky-shoot" />}
+        <div className={`sky-sun ${K.k}`} style={{ left: `${8 + dayFrac * 84}%`, top: `${30 - Math.sin(dayFrac * Math.PI) * 22}%` }} />
+        <SceneHeader D={D} title={S.all ? 'Your sky is full' : greeting()} />
+        {S.items.map((o, i) => {
           const [x, y] = ORB_SPOTS[i];
+          const b = S.burst === o.key;
           return (
-            <button key={o.key} className={`orb ${o.done ? 'lit' : ''} ${burst === i ? 'burst' : ''}`} style={{ left: `${x}%`, top: `${y + 14}%`, '--oc': o.color, animationDelay: `${(i % 5) * 0.6}s` }} onClick={() => tapOrb(o, i)} aria-label={o.label}>
+            <button key={o.key} className={`orb ${o.done ? 'lit' : ''} ${b ? 'burst' : ''}`} style={{ left: `${x}%`, top: `${y + 14}%`, '--oc': o.color, animationDelay: `${(i % 5) * 0.6}s` }} onClick={() => S.tapItem(o)} aria-label={o.label}>
               <span className="core">{o.done ? <Star size={18} fill="currentColor" /> : <HIcon icon={o.icon} size={18} color="#fff" />}</span>
               {!o.done && o.prog > 0 && <svg className="orb-ring" viewBox="0 0 52 52"><circle cx="26" cy="26" r="23" pathLength="1" strokeDasharray={`${o.prog} 1`} /></svg>}
               <span className="lbl">{o.label}</span>
-              {burst === i && <span className="orb-burst">{Array.from({ length: 8 }, (_, j) => <i key={j} style={{ '--a': `${j * 45}deg` }} />)}</span>}
+              {b && <span className="orb-burst">{Array.from({ length: 8 }, (_, j) => <i key={j} style={{ '--a': `${j * 45}deg` }} />)}</span>}
             </button>
           );
         })}
-        {!orbs.length && <div className="sky-empty">Add habits or tasks and they appear here as stars to light up.</div>}
-        <svg className="sky-hills" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 70 C80 30 150 60 220 45 S350 20 400 50 V120 H0Z" fill={S.hill2} /><path d="M0 95 C90 60 170 90 260 72 S360 70 400 85 V120 H0Z" fill={S.hill} /></svg>
-        <div className="sky-kai"><Companion stage={D.xp ? stageFor(D.xp.total.level).index : 0} mood={allLit ? 'happy' : companionMood(D.day.score)} size={78} /></div>
+        {!S.items.length && <div className="sky-empty">Add habits or tasks and they appear here as stars to light up.</div>}
+        <svg className="sky-hills" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 70 C80 30 150 60 220 45 S350 20 400 50 V120 H0Z" fill={K.hill2} /><path d="M0 95 C90 60 170 90 260 72 S360 70 400 85 V120 H0Z" fill={K.hill} /></svg>
+        <div className="sky-kai"><Companion stage={D.xp ? stageFor(D.xp.total.level).index : 0} mood={S.all ? 'happy' : companionMood(D.day.score)} size={78} /></div>
       </div>
-      <div className="sky-meter">
-        <div className="row between small"><span><b className="num">{lit}</b> of {orbs.length} stars lit</span><span className="muted">tap a star when it’s done</span></div>
-        <div className="sky-dots">{orbs.map((o) => <i key={o.key} className={o.done ? 'on' : ''} style={{ '--oc': o.color }} />)}</div>
-      </div>
-      <div className="mt-12"><Prompts D={D} /></div>
-      <div className="grid-2 mt-12">
-        <button className="sky-card" onClick={() => goTab('plan')}>
-          <span className="k"><Clock size={13} /> {D.nn.cur ? 'Now' : 'Next'}</span>
-          <span className="t ellipsis">{nn ? nn.title : 'Free time'}</span>
-          <span className="s">{nn ? fmtHM(nn.start) : 'nothing planned'}</span>
-        </button>
-        <button className="sky-card" onClick={() => (ns ? push('Lesson', { sid: ns.s.sid, id: ns.next.id }) : goTab('study'))} style={{ '--sc': ns?.s.color }}>
-          <span className="k"><GraduationCap size={13} /> {ns ? ns.s.title : 'Study'}</span>
-          <span className="t ellipsis">{ns ? ns.next.title : 'All roadmaps'}</span>
-          <span className="s">up next</span>
-        </button>
-      </div>
-      <div className="card mt-12">
-        <div className="row between"><span className="h3">How are you feeling?</span><button className="tiny muted" onClick={() => push('MoodCheckin')}>More precise</button></div>
-        <div className="mt-8"><MoodScale value={null} onChange={(v) => A.quickMood(v, t)} size={32} /></div>
-      </div>
-      <QuickAddFab t={t} />
-      <MoodDetailSheet state={A.moodSheet} onClose={() => A.setMoodSheet(null)} emotions={settings.emotions} />
-    </div>
+      <SceneStats D={D} S={S} label="stars lit" />
+    </>
   );
 }
+
+/* ---------- Garden: every habit is a plant that grows as you log it ---------- */
+export function GardenHero() {
+  const { D, A } = useScene();
+  if (!D) return <div className="scene" style={{ height: 470 }} />;
+  return <GardenScene D={D} A={A} />;
+}
+function Plant({ o, burst, onTap, scale = 1 }) {
+  const p = o.done ? 1 : o.prog;
+  const h = 26 + p * 64;
+  return (
+    <button className={`plant ${o.done ? 'bloom' : ''} ${burst ? 'water' : ''}`} onClick={onTap} aria-label={o.label} style={{ '--pc': o.color, transform: `scale(${scale})` }}>
+      <svg viewBox="0 0 60 130" width="60" height="130" className="plant-svg">
+        <g className="plant-sway">
+          <path d={`M30 112 C 30 ${112 - h * 0.5}, ${o.done ? 30 : 33} ${112 - h * 0.8}, 30 ${112 - h}`} stroke="#3f8f4f" strokeWidth="3.4" fill="none" strokeLinecap="round" />
+          {p > 0.15 && <path d={`M30 ${112 - h * 0.35} q -16 -6 -20 -18 q 14 0 20 12z`} fill="#4fae5f" />}
+          {p > 0.45 && <path d={`M30 ${112 - h * 0.6} q 16 -6 20 -18 q -14 0 -20 12z`} fill="#5cc06c" />}
+          {p > 0.75 && <path d={`M30 ${112 - h * 0.82} q -12 -4 -15 -14 q 11 0 15 9z`} fill="#4fae5f" />}
+          {o.done ? (
+            <g transform={`translate(30 ${112 - h})`} className="flower">
+              {[0, 60, 120, 180, 240, 300].map((a) => <ellipse key={a} cx="0" cy="-9" rx="6" ry="9.5" fill={o.color} transform={`rotate(${a})`} />)}
+              <circle r="6" fill="#fde68a" />
+            </g>
+          ) : (
+            <circle cx="30" cy={112 - h} r={4 + p * 3} fill={o.color} opacity=".85" />
+          )}
+        </g>
+        <path d="M14 108 h32 l-4 20 h-24z" fill="#b5653a" /><rect x="11" y="104" width="38" height="7" rx="3" fill="#cf7a47" />
+      </svg>
+      {burst && <span className="drops">{[0, 1, 2, 3, 4].map((j) => <i key={j} style={{ left: `${30 + j * 9}%`, animationDelay: `${j * 0.07}s` }} />)}</span>}
+      <span className="plant-lbl">{o.label}</span>
+      {o.sub && !o.done && <span className="plant-sub">{o.sub}</span>}
+    </button>
+  );
+}
+function GardenScene({ D, A }) {
+  const S = useSceneItems(D, A, 10);
+  const h = new Date().getHours();
+  const night = h < 6 || h >= 20;
+  const front = S.items.slice(0, 5), back = S.items.slice(5, 10);
+  const butterflies = S.lit >= Math.max(1, Math.ceil(S.items.length / 2));
+  return (
+    <>
+      <div className={`scene garden ${night ? 'night' : ''}`}>
+        <div className="g-sun" style={{ width: 52 + D.day.score * 0.4, height: 52 + D.day.score * 0.4 }} />
+        <div className="g-cloud c1" /><div className="g-cloud c2" />
+        <SceneHeader D={D} title={S.all ? 'Your garden is in full bloom' : 'Tend your garden'} />
+        <svg className="g-hill" viewBox="0 0 400 140" preserveAspectRatio="none"><path d="M0 60 C 90 20 180 50 260 34 S 370 30 400 44 V140 H0Z" fill={night ? '#1d3a2a' : '#8fd18a'} /><path d="M0 92 C 100 66 210 92 300 76 S 380 78 400 84 V140 H0Z" fill={night ? '#163022' : '#6fbf6c'} /></svg>
+        <div className="g-row back">{back.map((o) => <Plant key={o.key} o={o} scale={0.82} burst={S.burst?.startsWith(o.key)} onTap={() => S.tapItem(o)} />)}</div>
+        <div className="g-row front">{front.map((o) => <Plant key={o.key} o={o} burst={S.burst?.startsWith(o.key)} onTap={() => S.tapItem(o)} />)}</div>
+        {!S.items.length && <div className="sky-empty" style={{ color: '#1c3b1c' }}>Add habits or tasks to plant your first seeds.</div>}
+        {butterflies && <><span className="butterfly b1" /><span className="butterfly b2" /></>}
+      </div>
+      <SceneStats D={D} S={S} label="in bloom" />
+    </>
+  );
+}
+
+/* ---------- Ocean: an aquarium; finished items swim up into the light ---------- */
+export function OceanHero() {
+  const { D, A } = useScene();
+  if (!D) return <div className="scene" style={{ height: 470 }} />;
+  return <OceanScene D={D} A={A} />;
+}
+function Fish({ o, i, burst, onTap }) {
+  const top = o.done ? 14 + (i % 3) * 8 : 40 + ((i * 5) % 8) * 5 - o.prog * 12;
+  const dur = o.done ? 9 + (i % 4) : 16 + (i % 5) * 2;
+  return (
+    <button className={`fish ${o.done ? 'happy' : ''} ${burst ? 'pop' : ''}`} onClick={onTap} aria-label={o.label} style={{ top: `${top}%`, '--fc': o.color, animationDuration: `${dur}s`, animationDelay: `-${(i * 2.3) % dur}s` }}>
+      <span className="fish-body">
+        <svg viewBox="0 0 64 36" width="58" height="33"><path d="M8 18 C 18 2, 44 2, 52 18 C 44 34, 18 34, 8 18 Z" fill={o.color} /><path d="M50 18 L64 6 L60 18 L64 30 Z" fill={o.color} opacity=".85" /><circle cx="18" cy="15" r="3.2" fill="#fff" /><circle cx="17.4" cy="15" r="1.6" fill="#111" /><path d="M28 9 q4 9 0 18" stroke="rgba(255,255,255,.45)" strokeWidth="2" fill="none" /></svg>
+        <span className="fish-ico"><HIcon icon={o.icon} size={11} color="#fff" /></span>
+      </span>
+      <span className="fish-lbl">{o.label}{o.sub && !o.done ? ` · ${o.sub}` : ''}</span>
+      {burst && <span className="bub-burst">{[0, 1, 2, 3, 4, 5].map((j) => <i key={j} style={{ left: `${10 + j * 14}%`, animationDelay: `${j * 0.05}s` }} />)}</span>}
+    </button>
+  );
+}
+function OceanScene({ D, A }) {
+  const S = useSceneItems(D, A, 9);
+  const tide = Math.max(0.12, D.day.score / 100);
+  return (
+    <>
+      <div className="scene ocean">
+        <div className="o-water" style={{ height: `${55 + tide * 45}%` }}><div className="o-wave" /></div>
+        <div className="o-rays" />
+        {Array.from({ length: 10 }, (_, j) => <i key={j} className="o-bubble" style={{ left: `${(j * 37) % 100}%`, animationDelay: `${j * 0.9}s`, animationDuration: `${6 + (j % 4)}s` }} />)}
+        <SceneHeader D={D} title={S.all ? 'Everyone is swimming high' : 'Your reef'} />
+        {S.items.map((o, i) => <Fish key={o.key} o={o} i={i} burst={S.burst?.startsWith(o.key)} onTap={() => S.tapItem(o)} />)}
+        {!S.items.length && <div className="sky-empty">Add habits or tasks and they’ll swim in here.</div>}
+        <svg className="o-sand" viewBox="0 0 400 90" preserveAspectRatio="none"><path d="M0 40 C 90 20 180 46 260 30 S 360 26 400 36 V90 H0Z" fill="#e9cf98" /><path d="M0 62 C 100 48 220 70 300 56 S 380 58 400 60 V90 H0Z" fill="#d9b87a" /></svg>
+        <div className="o-weed w1" /><div className="o-weed w2" /><div className="o-weed w3" />
+        <div className="o-kai"><Companion stage={D.xp ? stageFor(D.xp.total.level).index : 0} mood={S.all ? 'happy' : companionMood(D.day.score)} size={58} /></div>
+        <div className="o-tide">tide {Math.round(tide * 100)}%</div>
+      </div>
+      <SceneStats D={D} S={S} label="swimming high" />
+    </>
+  );
+}
+
+/* ---------- Skyline: each item is a building; windows light up as you progress ---------- */
+export function CityHero() {
+  const { D, A } = useScene();
+  if (!D) return <div className="scene" style={{ height: 470 }} />;
+  return <CityScene D={D} A={A} />;
+}
+function CityScene({ D, A }) {
+  const S = useSceneItems(D, A, 8);
+  const h = new Date().getHours();
+  const day = h >= 7 && h < 17;
+  const n = S.items.length || 1;
+  return (
+    <>
+      <div className={`scene city ${day ? 'day' : ''}`}>
+        {!day && <div className="sky-stars" />}
+        <div className="c-moon" />
+        <div className="c-board"><span>TODAY</span><b className="num">{D.day.score}</b></div>
+        <SceneHeader D={D} title={S.all ? 'The whole city is lit' : 'Light up the city'} />
+        <div className="c-far" />
+        <div className="c-row">
+          {S.items.map((o, i) => {
+            const floors = 5 + ((i * 7) % 5);
+            const cols = 3;
+            const total = floors * cols;
+            const on = Math.round((o.done ? 1 : o.prog) * total);
+            const b = S.burst?.startsWith(o.key);
+            return (
+              <button key={o.key} className={`bld ${o.done ? 'done' : ''} ${b ? 'flash' : ''}`} onClick={() => S.tapItem(o)} aria-label={o.label} style={{ '--bc': o.color, maxWidth: n > 5 ? 'none' : 54 }}>
+                {o.done && <span className="bld-top"><Star size={11} fill="currentColor" /></span>}
+                <span className="bld-body" style={{ gridTemplateRows: `repeat(${floors}, 1fr)`, height: floors * (n > 6 ? 15 : 17) + 12 }}>
+                  {Array.from({ length: total }, (_, k) => <i key={k} className={total - 1 - k < on ? 'on' : ''} style={{ transitionDelay: `${(total - k) * 25}ms` }} />)}
+                </span>
+                <span className="bld-lbl">{o.label}</span>
+              </button>
+            );
+          })}
+          {!S.items.length && <div className="sky-empty">Add habits or tasks to build your skyline.</div>}
+        </div>
+        {S.all && <div className="fireworks">{[0, 1, 2].map((k) => <span key={k} className={`fw f${k}`}>{Array.from({ length: 12 }, (_, j) => <i key={j} style={{ '--a': `${j * 30}deg` }} />)}</span>)}</div>}
+        <div className="c-street" />
+      </div>
+      <SceneStats D={D} S={S} label="buildings lit" />
+    </>
+  );
+}
+
+/* ---------- Launch: fuel the rocket; at 100% it lifts off ---------- */
+export function RocketHero() {
+  const { D, A } = useScene();
+  if (!D) return <div className="scene" style={{ height: 470 }} />;
+  return <RocketScene D={D} A={A} />;
+}
+function RocketScene({ D, A }) {
+  const S = useSceneItems(D, A, 10);
+  const fuel = S.items.length ? (S.lit + S.items.filter((o) => !o.done).reduce((a, o) => a + o.prog, 0)) / S.items.length : 0;
+  const [launched, setLaunched] = useState(false);
+  useEffect(() => { if (S.all && !launched) { const t = setTimeout(() => { setLaunched(true); sfxArrive(); }, 600); return () => clearTimeout(t); } if (!S.all) setLaunched(false); }, [S.all]);
+  const left = S.items.filter((o) => !o.done);
+  return (
+    <>
+      <div className={`scene rocket ${launched ? 'launched' : ''}`}>
+        <div className="sky-stars" />
+        <div className="r-planet" />
+        <SceneHeader D={D} title={launched ? 'Liftoff! Day complete' : left.length ? `T-minus ${left.length}` : 'Ready for launch'} />
+        <div className="r-pad">
+          <div className="r-rocket">
+            <svg viewBox="0 0 80 170" width="80" height="170">
+              <defs><clipPath id="rfuel"><path d="M40 6 C 60 26 62 60 62 96 V 128 H 18 V 96 C 18 60 20 26 40 6 Z" /></clipPath></defs>
+              <path d="M40 6 C 60 26 62 60 62 96 V 128 H 18 V 96 C 18 60 20 26 40 6 Z" fill="#eef1f7" stroke="#c9cfdc" strokeWidth="2" />
+              <rect x="16" y={128 - fuel * 108} width="48" height={fuel * 108} fill="url(#fuelg)" clipPath="url(#rfuel)" opacity=".55" className="r-fuel" />
+              <linearGradient id="fuelg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#f97316" /><stop offset="1" stopColor="#facc15" /></linearGradient>
+              <circle cx="40" cy="58" r="11" fill="#3b82f6" stroke="#c9cfdc" strokeWidth="3" /><circle cx="37" cy="55" r="3" fill="#bfdbfe" />
+              <path d="M18 104 L4 136 L18 128 Z" fill="#ef4444" /><path d="M62 104 L76 136 L62 128 Z" fill="#ef4444" /><rect x="30" y="128" width="20" height="8" rx="2" fill="#94a3b8" />
+            </svg>
+            <span className={`r-flame ${fuel > 0 ? 'on' : ''} ${launched ? 'big' : ''}`} />
+          </div>
+          <div className="r-gauge"><i style={{ height: `${fuel * 100}%` }} /><span className="num">{Math.round(fuel * 100)}%</span></div>
+          {launched && <div className="r-smoke"><i /><i /><i /></div>}
+        </div>
+        <div className="r-cells">
+          {S.items.map((o) => {
+            const b = S.burst?.startsWith(o.key);
+            return (
+              <button key={o.key} className={`cell ${o.done ? 'full' : ''} ${b ? 'zap' : ''}`} onClick={() => S.tapItem(o)} aria-label={o.label} style={{ '--cc': o.color }}>
+                <span className="cell-fill" style={{ height: `${(o.done ? 1 : o.prog) * 100}%` }} />
+                <span className="cell-ico">{o.done ? <Check size={14} strokeWidth={3} /> : <HIcon icon={o.icon} size={14} color="#fff" />}</span>
+                <span className="cell-lbl">{o.label}</span>
+              </button>
+            );
+          })}
+          {!S.items.length && <div className="sky-empty" style={{ position: 'static' }}>Add habits or tasks to fuel today’s launch.</div>}
+        </div>
+      </div>
+      <SceneStats D={D} S={S} label="fuel cells" />
+    </>
+  );
+}
+

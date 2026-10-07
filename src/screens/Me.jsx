@@ -130,7 +130,7 @@ export function Settings() {
         {isNative && <div className="small muted">On Poco / HyperOS: App info → Autostart ON and Battery saver → No restrictions, or reminders can be delayed.</div>}
 
         <div className="eyebrow mt-8">Today screen</div>
-        <Field label="Layout" hint="Classic · Widgets (bento tiles) · Focus (one card at a time, swipe) · Timeline (your day on a sun arc) · Checklist (calm list) · Sky (light up a star for everything you finish)"><Chips wrap value={settings.todayLayout || 'classic'} onChange={(v) => set('todayLayout', v)} options={TODAY_LAYOUTS} /></Field>
+        <Field label="Layout" hint="Every layout shows everything. Only the top scene changes: Night sky (light a star) · Garden (plants grow and bloom) · Reef (fish swim up to the light) · Skyline (windows light up) · Launch (fuel the rocket to lift off)"><Chips wrap value={settings.todayLayout || 'classic'} onChange={(v) => set('todayLayout', v)} options={TODAY_LAYOUTS} /></Field>
 
         <div className="eyebrow mt-8">Keep in touch</div>
         <div className="grid-2">
