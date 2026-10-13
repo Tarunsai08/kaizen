@@ -141,3 +141,27 @@
 .st-now .after { margin-top: 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .st-time { flex-shrink: 0; margin-top: 2px; height: 22px; padding: 0 8px; border-radius: 7px; font-size: 12px; font-weight: 750; line-height: 22px; color: var(--text-2); background: var(--surface-2); font-variant-numeric: tabular-nums; }
 .st-time.now { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.st-prompts { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.st-prompts .st-prompt { margin-top: 0; }
+.st-todohead { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 26px; padding: 14px 16px; border-radius: 18px; text-align: left; background: var(--surface); box-shadow: var(--z-card); }
+.st-todohead b { display: block; font-size: 17px; font-weight: 780; letter-spacing: -0.02em; }
+.st-todohead small { display: block; font-size: 12.5px; color: var(--muted); font-weight: 600; margin-top: 1px; }
+.st-todohead .chev { color: var(--muted); transition: transform 0.3s var(--spring); }
+.st-todohead.open .chev { transform: rotate(90deg); }
+.st-todohead + .st-list { margin-top: 8px; }
+
+/* score ring */
+.sr { position: relative; width: 112px; height: 112px; flex-shrink: 0; }
+.sr svg { width: 100%; height: 100%; overflow: visible; }
+.sr .bg { fill: none; stroke: var(--surface-3); stroke-width: 8; }
+.sr .fg { fill: none; stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.sr .g1 { stop-color: color-mix(in srgb, var(--accent) 55%, #fff); }
+.sr .g2 { stop-color: var(--accent); }
+.sr .tk { stroke: var(--line-2); stroke-width: 1.1; stroke-linecap: round; }
+.sr .tk.on { stroke: color-mix(in srgb, var(--accent) 60%, transparent); }
+.sr .knob { fill: #fff; stroke: var(--accent); stroke-width: 2.4; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3)); }
+.sr .best { fill: var(--goal); }
+.sr .in { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.sr .in b { font-size: 31px; font-weight: 820; letter-spacing: -0.05em; line-height: 1; }
+.sr .in small { font-size: 9.5px; font-weight: 750; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px; }
+.sr .in em { font-style: normal; font-size: 9.5px; font-weight: 700; color: var(--goal); margin-top: 2px; }

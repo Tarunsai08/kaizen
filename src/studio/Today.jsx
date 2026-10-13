@@ -28,6 +28,7 @@ export default function StudioToday() {
   const { settings, push } = useApp();
   const [qe, setQe] = useState(null);
   const [showDone, setShowDone] = useState(false);
+  const [openTodos, setOpenTodos] = useState(false);
   const [flash, doFlash] = useFlash(1100);
   const [, tick] = useState(0);
   const order = useRef([]);
@@ -53,7 +54,9 @@ export default function StudioToday() {
     if (!task || task.done) return;
     rows.push({ key: 's' + ss[0].id, id: taskId, task, title: ss[0].title, done: false, meta: [task.title !== ss[0].title ? task.title : '', ss.length > 1 ? `${ss.length} sessions today` : ''].filter(Boolean), sess: ss, time: ss[0].start, sessionRow: true });
   });
-  let list = rows.sort((a, b) => (a.done - b.done) || (a.time ?? 9999) - (b.time ?? 9999));
+  const PR = { high: 0, medium: 1, low: 2 };
+  const deadline = (x) => `${x.task.due || '9999-99-99'} ${x.task.dueTime || '99:99'}`;
+  let list = rows.sort((a, b) => (a.done - b.done) || (PR[a.task.priority] ?? 3) - (PR[b.task.priority] ?? 3) || deadline(a).localeCompare(deadline(b)) || (a.time ?? 9999) - (b.time ?? 9999));
   // a ticked to-do stays where it was while its check animates, then moves to "completed"
   if (list.some((x) => flash[x.key])) { const pos = new Map(order.current.map((k, i) => [k, i])); list = [...list].sort((a, b) => (pos.get(a.key) ?? 999) - (pos.get(b.key) ?? 999)); }
   else order.current = list.map((x) => x.key);
@@ -81,10 +84,12 @@ export default function StudioToday() {
   const focusS = nowS || nextS;
   const fallback = !focusS && day.find((x) => !x.done);
   const listDay = fallback ? day.filter((x) => x !== fallback) : day;
+  const pending = [...listDay, ...eve].filter((x) => !x.done);
+  const overdueN = pending.filter((x) => x.overdue).length, highN = pending.filter((x) => x.task.priority === 'high').length;
+  const todoSummary = pending.length ? [`${pending.length} left`, overdueN && `${overdueN} overdue`, highN && `${highN} high priority`, done.length && `${done.length} done`].filter(Boolean).join(' · ') : done.length ? `All ${done.length} done` : 'Nothing on your list';
   const after = focusS ? open.filter((s) => s.start > focusS.start)[0] : null;
   const startFocus = async (s) => { tap('medium'); await startSession(s.id); push('FocusRun', { mins: Math.max(5, s.end - s.start), kind: settings.treeKind || 'oak', taskId: s.taskId, label: s.title }); };
 
-  const prompt = D.prompts[0];
   const extras = [
     D.workout && !D.workout.done && { k: 'w', i: Dumbbell, c: 'var(--fit)', l: 'Workout', s: D.workout.summary, go: D.workout.go },
     ...D.goals.filter((g) => g.checkinDue).map((g) => ({ k: g.key, i: Flag, c: g.color, l: g.title, s: 'Goal check-in', go: g.go })),
@@ -118,10 +123,7 @@ export default function StudioToday() {
 
       {/* the day score, a little richer than before */}
       <section className="st-score" onClick={go.you}>
-        <div className="ring" style={{ '--p': D.score }}>
-          <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" className="bg" /><circle cx="50" cy="50" r="42" className="fg" pathLength="100" strokeDasharray={`${Math.max(0.5, D.score)} 100`} /></svg>
-          <b className="num">{D.score}</b><small>score</small>
-        </div>
+        <ScoreRing score={D.score} best={D.best} />
         <div className="grow">
           <div className="st-score-h">{D.allDone ? 'Everything done' : D.score >= 70 ? 'Great day so far' : D.score >= 35 ? 'Good momentum' : 'Let’s get going'}</div>
           <div className="st-chips">
@@ -142,12 +144,16 @@ export default function StudioToday() {
         </div>
       </section>
 
-      {prompt && (
-        <button className="st-prompt" style={{ '--c': `var(--${prompt.tone})` }} onClick={prompt.go}>
-          {React.createElement(PROMPT_ICON[prompt.k] || Moon, { size: 18 })}
-          <span className="grow"><b>{prompt.title}</b><small>{prompt.sub}</small></span>
-          <ChevronRight size={17} />
-        </button>
+      {D.prompts.length > 0 && (
+        <div className="st-prompts">
+          {D.prompts.map((p) => (
+            <button key={p.k} className="st-prompt" style={{ '--c': `var(--${p.tone})` }} onClick={p.go}>
+              {React.createElement(PROMPT_ICON[p.k] || Moon, { size: 18 })}
+              <span className="grow"><b>{p.title}</b><small>{p.sub}</small></span>
+              <ChevronRight size={17} />
+            </button>
+          ))}
+        </div>
       )}
 
       {/* one thing at a time */}
@@ -177,21 +183,6 @@ export default function StudioToday() {
         </section>
       )}
 
-      {/* every to-do, once */}
-      <div className="st-h">To-dos<button onClick={go.plan}>Day plan</button></div>
-      <div className="st-list">
-        {listDay.map(todo)}
-        {!listDay.length && !eve.length && !fallback && <div className="st-empty"><Star size={40} strokeWidth={1.2} /><span>{done.length ? 'All done for today.' : 'Nothing on your list.'}</span><button onClick={() => setQe('today')}>Add a to-do</button></div>}
-      </div>
-      {eve.length > 0 && (
-        <>
-          <div className="st-h"><Moon size={16} className="moon" fill="currentColor" /> This Evening</div>
-          <div className="st-list">{eve.map(todo)}</div>
-        </>
-      )}
-      {done.length > 0 && <button className="st-donebtn" onClick={() => setShowDone(!showDone)}><ChevronRight size={15} style={{ transform: showDone ? 'rotate(90deg)' : 'none', transition: 'transform .3s' }} /> {done.length} completed</button>}
-      {showDone && <div className="st-list faded">{done.map(todo)}</div>}
-
       {D.habits.length > 0 && (
         <>
           <div className="st-h">Habits<button onClick={go.habits}>All</button></div>
@@ -208,6 +199,26 @@ export default function StudioToday() {
           </div>
         </>
       )}
+
+      {/* every to-do, once */}
+      <button className={`st-todohead ${openTodos ? 'open' : ''}`} onClick={() => { tap(); setOpenTodos(!openTodos); }}>
+        <span className="grow"><b>To-dos</b><small>{todoSummary}</small></span>
+        <ChevronRight size={18} className="chev" />
+      </button>
+      {openTodos && <>
+      <div className="st-list">
+        {listDay.map(todo)}
+        {!listDay.length && !eve.length && !fallback && <div className="st-empty"><Star size={40} strokeWidth={1.2} /><span>{done.length ? 'All done for today.' : 'Nothing on your list.'}</span><button onClick={() => setQe('today')}>Add a to-do</button></div>}
+      </div>
+      {eve.length > 0 && (
+        <>
+          <div className="st-h"><Moon size={16} className="moon" fill="currentColor" /> This Evening</div>
+          <div className="st-list">{eve.map(todo)}</div>
+        </>
+      )}
+      {done.length > 0 && <button className="st-donebtn" onClick={() => setShowDone(!showDone)}><ChevronRight size={15} style={{ transform: showDone ? 'rotate(90deg)' : 'none', transition: 'transform .3s' }} /> {done.length} completed</button>}
+      {showDone && <div className="st-list faded">{done.map(todo)}</div>}
+      </>}
 
       {extras.length > 0 && (
         <>
@@ -226,6 +237,36 @@ export default function StudioToday() {
       <div style={{ height: 30 }} />
       <button className="st-plus" onClick={() => setQe(n.getHours() >= 17 ? 'evening' : 'today')} aria-label="New to-do"><Plus size={28} strokeWidth={2.4} /></button>
       <QuickEntry open={!!qe} when={qe || 'today'} onClose={() => setQe(null)} />
+    </div>
+  );
+}
+/** The day score: gradient arc with a glowing end, tick marks, your best day marked, and a count-up number. */
+function ScoreRing({ score, best }) {
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const a = from.current, b = score, t0 = performance.now(), dur = 900;
+    let raf;
+    const step = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); setShown(Math.round(a + (b - a) * e)); if (k < 1) raf = requestAnimationFrame(step); else from.current = b; };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+  const R = 42, ang = (v) => (v / 100) * 2 * Math.PI - Math.PI / 2;
+  const end = [50 + R * Math.cos(ang(shown)), 50 + R * Math.sin(ang(shown))];
+  const bm = best > score ? [50 + R * Math.cos(ang(best)), 50 + R * Math.sin(ang(best))] : null;
+  return (
+    <div className="sr">
+      <svg viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="srg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" className="g1" /><stop offset="1" className="g2" /></linearGradient>
+        </defs>
+        {Array.from({ length: 40 }, (_, i) => { const a = (i / 40) * 2 * Math.PI; return <line key={i} className={i / 40 * 100 <= shown ? 'tk on' : 'tk'} x1={50 + 32 * Math.cos(a)} y1={50 + 32 * Math.sin(a)} x2={50 + (i % 5 ? 34 : 35.5) * Math.cos(a)} y2={50 + (i % 5 ? 34 : 35.5) * Math.sin(a)} />; })}
+        <circle cx="50" cy="50" r={R} className="bg" />
+        <circle cx="50" cy="50" r={R} className="fg" stroke="url(#srg)" pathLength="100" strokeDasharray={`${Math.max(0.6, shown)} 100`} transform="rotate(-90 50 50)" />
+        {bm && <circle cx={bm[0]} cy={bm[1]} r="2.2" className="best" />}
+        {shown > 0 && <circle cx={end[0]} cy={end[1]} r="4.6" className="knob" />}
+      </svg>
+      <div className="in"><b className="num">{shown}</b><small>day score</small>{best > score && <em>best {best}</em>}</div>
     </div>
   );
 }

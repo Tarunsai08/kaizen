@@ -5,7 +5,7 @@ import { isNative } from './native';
 import { hmToMin, today, dow, addDays } from './date';
 import { checkinDays, DEFAULT_CHECKIN, habitActiveOn } from './logic';
 import { blockSegments } from '../scheduler';
-import { expand, curate } from './notifyCurate';
+import { expand, curate, deadlineNudges } from './notifyCurate';
 
 let scheduling = null;
 let timer = null;
@@ -85,6 +85,9 @@ async function buildAll() {
     const at = new Date(y, mo - 1, d, hh, mm).getTime() - (t.reminder || 0) * 60000;
     if (at > Date.now()) push({ pri: 'critical', title: t.title, body: t.reminder ? `Due ${t.dueTime ? 'at ' + t.dueTime : 'today'}` : 'Reminder', actionTypeId: 'TASK', extra: { kind: 'task', taskId: t.id }, schedule: { at: new Date(at), allowWhileIdle: true } });
   }
+
+  // Deadlines coming up (for tasks without their own reminder)
+  if (settings.deadlineNudges !== false) deadlineNudges(await db.tasks.filter((t) => !t.done && !!t.due).toArray()).forEach((n) => push(n));
 
   // Planner: session start / end (quiet during sleep and class) and the evening wrap-up
   const pl = { alertSession: true, alertWrap: true, wrapTime: '21:30', ...(settings.planner || {}) };

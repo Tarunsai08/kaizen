@@ -60,3 +60,20 @@ test('smart: an hourly water nudge becomes at most 3 a day', () => {
   assert.equal(out.length, 3);
   assert.deepEqual(out.map((x) => x.title), ['water 9', 'water 13', 'water 16']);
 });
+
+import { deadlineNudges } from './notifyCurate.js';
+test('deadline nudges: due today, evening before for big tasks, overdue once; none when a reminder is set', () => {
+  const tasks = [
+    { id: 1, title: 'Small', due: '2026-10-15' },
+    { id: 2, title: 'Big', due: '2026-10-16', dueTime: '17:00', subtasks: [{ done: true }, { done: false }, { done: false }] },
+    { id: 3, title: 'Has reminder', due: '2026-10-15', reminder: 0 },
+    { id: 4, title: 'Done', due: '2026-10-15', done: true },
+    { id: 5, title: 'Far away', due: '2026-11-30' },
+  ];
+  const out = deadlineNudges(tasks, NOW);
+  const titles = out.map((x) => x.title);
+  assert.deepEqual(titles, ['Due today: Small', 'Overdue: Small', 'Due today: Big', 'Due tomorrow: Big', 'Overdue: Big']);
+  const big = out.find((x) => x.title === 'Due today: Big');
+  assert.equal(new Date(big.schedule.at).getHours(), 15); // 2h before 17:00
+  assert.match(big.body, /2 of 3 steps left/);
+});

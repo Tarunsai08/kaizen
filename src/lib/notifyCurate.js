@@ -86,3 +86,30 @@ export function curate(list, { mode = 'smart', now = Date.now(), quiet = () => f
 }
 
 const clean = (s) => String(s || '').replace(/^[^\p{L}\p{N}]+\s*/u, '');
+
+/**
+ * Deadline nudges for tasks you didn't set a reminder on.
+ * - morning of the due day (or 2 hours before a set time): "Due today"
+ * - evening before, for bigger tasks (steps, difficulty 3+, or 2h+ estimate): "Due tomorrow"
+ * - the morning after a missed deadline, once: "Overdue"
+ */
+export function deadlineNudges(tasks, now = Date.now(), { morning = 9 * 60, evening = 19 * 60 } = {}) {
+  const out = [];
+  const at = (ymd, min) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d, Math.floor(min / 60), min % 60); };
+  const shift = (ymd, k) => { const [y, m, d] = ymd.split('-').map(Number); const x = new Date(y, m - 1, d + k); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+  const toMin = (hm) => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+  for (const t of tasks) {
+    if (t.done || t.skipped || !t.due || t.reminder != null) continue;
+    if (at(t.due, 0).getTime() > now + 8 * 864e5) continue;
+    const subs = t.subtasks || [];
+    const left = subs.filter((s) => !s.done).length;
+    const steps = subs.length ? ` · ${left} of ${subs.length} steps left` : '';
+    const big = subs.length >= 2 || (t.difficulty || 0) >= 3 || (t.estHours || 0) >= 2;
+    const base = { pri: 'high', ref: `task:${t.id}`, actionTypeId: 'TASK', extra: { kind: 'task', taskId: t.id } };
+    const dueMin = t.dueTime ? Math.max(7 * 60, toMin(t.dueTime) - 120) : morning;
+    out.push({ ...base, title: `Due today: ${t.title}`, body: `${t.dueTime ? `By ${t.dueTime}` : 'Today'}${steps}. A focused session now keeps it easy.`, schedule: { at: at(t.due, dueMin), allowWhileIdle: true } });
+    if (big) out.push({ ...base, title: `Due tomorrow: ${t.title}`, body: `Worth a session tonight or first thing tomorrow${steps}.`, schedule: { at: at(shift(t.due, -1), evening), allowWhileIdle: true } });
+    out.push({ ...base, pri: 'low', title: `Overdue: ${t.title}`, body: 'Pick a new date or do one small step today.', schedule: { at: at(shift(t.due, 1), morning + 30), allowWhileIdle: true } });
+  }
+  return out.filter((n) => +n.schedule.at > now);
+}
