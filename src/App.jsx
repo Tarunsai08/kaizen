@@ -15,7 +15,7 @@ import { hcSync } from './lib/health';
 import { updateWidgets } from './lib/widgets';
 import { rescheduleSoon, registerActions, ensurePermission } from './lib/notify';
 import { applyPlColor } from './lib/plcolor';
-import { isStudio } from './studio/mode';
+import { isStudio, defaultNav, navKey } from './studio/mode';
 import { Spaces, SpaceScreen } from './studio/Spaces';
 import { FocusHub, FocusRun, ZenMode, Forest } from './studio/Focus';
 import { StudyHome, SubjectJourney, ChapterJourney, ConceptPath, LessonDone } from './studio/journey/Journey';
@@ -76,12 +76,14 @@ const TABS = [
   { key: 'health', label: 'Health', icon: HeartPulse, C: Health },
 ];
 
-// Studio rethinks the navigation: Habits and Health move into Spaces, Focus gets its own tab.
-const STUDIO_TABS = [
+// Every page that can sit in the bottom bar. Today is always first; the rest are chosen in Settings.
+const ALL_TABS = [
   { key: 'today', label: 'Today', icon: Sun, C: Today },
   { key: 'plan', label: 'Plan', icon: CalendarCheck, C: Plan },
   { key: 'focus', label: 'Focus', icon: Sprout, C: FocusHub },
   { key: 'study', label: 'Study', icon: GraduationCap, C: Study },
+  { key: 'habits', label: 'Habits', icon: Repeat2, C: Habits },
+  { key: 'health', label: 'Health', icon: HeartPulse, C: Health },
   { key: 'spaces', label: 'Spaces', icon: LayoutGrid, C: Spaces },
 ];
 
@@ -127,7 +129,7 @@ export default function App() {
   useEffect(() => { setSoundEnabled(settings.sound); }, [settings.sound]);
   // theme
   useEffect(() => {
-    document.documentElement.dataset.theme = settings.theme; document.documentElement.dataset.ui = isStudio(settings) ? 'studio' : 'classic'; applyPlColor(settings.plannerColor, settings.theme);
+    document.documentElement.dataset.theme = settings.theme; document.documentElement.dataset.ui = isStudio(settings) ? 'studio' : 'classic'; applyPlColor(settings.plannerColor, settings.theme, isStudio(settings));
     const meta = document.querySelector('meta[name=theme-color]');
     const zen = isStudio(settings);
     if (meta) meta.content = settings.theme === 'light' ? (zen ? '#f6f5f1' : '#f4f4f1') : (zen ? '#0e0e10' : '#000000');
@@ -150,7 +152,7 @@ export default function App() {
   const goTab = useCallback((k) => {
     tap();
     // a tab that doesn't exist in this style (e.g. Habits in Studio) opens as a page instead
-    if (!tabsRef.current.some((t) => t.key === k)) { setStack([{ name: 'Space', props: { k }, key: Math.random() }]); return; }
+    if (!ALL_TABS.some((t) => t.key === k)) { setStack([{ name: 'Space', props: { k }, key: Math.random() }]); return; }
     setTab(k); setStack([]);
   }, []);
 
@@ -169,6 +171,7 @@ export default function App() {
     if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
     const T = tabsRef.current;
     const i = T.findIndex((x) => x.key === stateRef.current.tab), j = i + (dx < 0 ? 1 : -1);
+    if (i < 0) return;
     if (j >= 0 && j < T.length) goTab(T[j].key);
   };
 
@@ -313,9 +316,10 @@ export default function App() {
 
   const top = stack[stack.length - 1];
   const studio = isStudio(settings);
-  const tabs = studio ? STUDIO_TABS : TABS;
+  const navKeys = (Array.isArray(settings[navKey(studio)]) && settings[navKey(studio)].length ? settings[navKey(studio)] : defaultNav(studio)).filter((k) => ALL_TABS.some((t) => t.key === k && k !== 'today')).slice(0, 4);
+  const tabs = [ALL_TABS[0], ...navKeys.map((k) => ALL_TABS.find((t) => t.key === k))];
   tabsRef.current = tabs;
-  const TabC = (tabs.find((t) => t.key === tab) || tabs[0]).C;
+  const TabC = (ALL_TABS.find((t) => t.key === tab) || tabs[0]).C;
   const Pushed = top ? SCREENS[top.name] : null;
 
   return (

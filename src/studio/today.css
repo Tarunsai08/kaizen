@@ -231,3 +231,14 @@
 .st-tile small { font-size: 11.5px; font-weight: 700; color: var(--muted); }
 .st-tile b { font-size: 15px; font-weight: 760; letter-spacing: -0.015em; line-height: 1.25; }
 .st-tile em { font-style: normal; font-size: 12px; color: var(--muted); max-width: 100%; margin-top: auto; padding-top: 4px; }
+
+/* fix: avatars (ring + dot) were clipped by the scroll row */
+.st-people { padding: 8px 12px 4px; margin-top: -6px; }
+/* snapping rows keep their side padding */
+.st-habits.scroll, .st-people { scroll-padding: 0 16px; }
+
+/* habit done: full ring in its colour, soft tint inside, small green tick — no solid fill */
+.st-hb.done .ic { background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); }
+.st-hb .tick { position: absolute; right: -1px; bottom: -1px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: #34b36a; box-shadow: 0 0 0 2.5px var(--surface); transform: scale(0); transition: transform 0.45s var(--spring); }
+.st-hb.done .tick { transform: scale(1); }
+.st-hb.done .n span { color: var(--text-2); }

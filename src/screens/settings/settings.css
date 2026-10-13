@@ -67,3 +67,15 @@
 .set-acc .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .set-acc .ck { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; box-shadow: inset 0 0 0 1.6px var(--faint); color: var(--pl-ink, #fff); }
 .set-acc .ck.on { background: var(--pl, var(--accent)); box-shadow: none; }
+.set-nav .nv { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 6px 8px 6px 14px; font-size: 15px; font-weight: 620; }
+.set-nav .nv + .nv { box-shadow: inset 0 1px 0 var(--line); }
+.set-nav .nv.fixed { color: var(--muted); }
+.set-nav .nv small { font-size: 12px; font-weight: 600; color: var(--muted); padding-right: 6px; }
+.set-nav .n { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: var(--pl-ink, #fff); background: var(--pl, var(--accent)); }
+.set-nav .nv button { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--text-2); }
+.set-nav .nv button:active { background: var(--surface-2); }
+.set-nav .nv button:disabled { opacity: 0.25; }
+.set-navadd { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
+.set-navadd button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 11px; border-radius: 10px; font-size: 13px; font-weight: 650; color: var(--pl, var(--accent)); background: color-mix(in srgb, var(--pl, var(--accent)) 12%, transparent); }
+.set-navadd button:disabled { opacity: 0.35; }
+.set-reset { display: block; margin: 0 auto; padding: 10px; font-size: 12.5px; font-weight: 650; color: var(--muted); }

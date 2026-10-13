@@ -16,6 +16,7 @@ import { useToday } from '../screens/today/useToday';
 import { useFlash, Kai } from '../screens/today/shared';
 import { QuickEntry } from './QuickEntry';
 import { personStatus } from '../screens/People';
+import { softColor } from './mode';
 import './today.css';
 
 const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -35,6 +36,7 @@ export default function StudioToday() {
   const order = useRef([]);
   useEffect(() => { const i = setInterval(() => tick((x) => x + 1), 30000); return () => clearInterval(i); }, []);
   const t = today();
+  const sc = (c) => softColor(c, settings.theme !== 'light');
   const plan = useLiveQuery(() => dayData(t, settings), [t, settings.wakeTarget]);
   const people = useLiveQuery(async () => {
     const [ps, inter] = await Promise.all([db.people.toArray(), db.interactions.toArray()]);
@@ -188,10 +190,11 @@ export default function StudioToday() {
           <div className="st-ch"><b>Habits</b><span>{D.habits.filter((h) => h.done).length}/{D.habits.length} done</span><button onClick={go.habits}>All</button></div>
           <div className={`st-habits ${D.habits.length > 4 ? 'scroll' : ''}`} style={{ '--n': Math.min(4, Math.max(3, D.habits.length)) }}>
             {D.habits.map((h) => (
-              <div key={h.key} className={`st-hb ${h.done ? 'done' : ''} ${flash[h.key] ? 'flash-' + flash[h.key] : ''}`} style={{ '--c': h.color }}>
+              <div key={h.key} className={`st-hb ${h.done ? 'done' : ''} ${flash[h.key] ? 'flash-' + flash[h.key] : ''}`} style={{ '--c': sc(h.color) }}>
                 <button className="c" onClick={() => doHabit(h)} aria-label={h.name}>
                   <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" className="bg" /><circle cx="24" cy="24" r="21" className="fg" pathLength="100" strokeDasharray={`${h.prog * 100} 100`} /></svg>
-                  <span className="ic">{h.done ? <Check size={20} strokeWidth={3} /> : <HIcon icon={h.icon} size={20} color="currentColor" />}</span>
+                  <span className="ic"><HIcon icon={h.icon} size={20} color="currentColor" /></span>
+                  <span className="tick"><Check size={12} strokeWidth={3.5} /></span>
                 </button>
                 <button className="n" onClick={() => openHabit(h)}><span className="ellipsis">{h.name}</span><small>{h.target > 1 ? `${h.amt} of ${h.target}${h.h.unit ? ' ' + h.h.unit : ''}` : h.done ? 'done' : 'today'}</small></button>
               </div>
@@ -241,7 +244,7 @@ export default function StudioToday() {
         <section className="st-card">
           <div className="st-ch"><b>Keep learning</b><span>{D.study.streak ? `${D.study.streak}-day streak` : 'today'}</span><button onClick={D.study.all}>Study</button></div>
           {D.study.subjects.map((sj) => (
-            <button key={sj.key} className="st-sj" style={{ '--c': sj.color }} onClick={sj.go}>
+            <button key={sj.key} className="st-sj" style={{ '--c': sc(sj.color) }} onClick={sj.go}>
               <span className="ic"><HIcon icon={sj.icon} size={18} color="#fff" /></span>
               <span className="grow tx"><small>{sj.title}</small><b className="ellipsis">{sj.next}</b><span className="pb"><i style={{ width: `${Math.round(sj.prog * 100)}%` }} /></span></span>
               <span className="mins num">{sj.mins}<small>/{sj.goal}m</small></span>
@@ -258,7 +261,7 @@ export default function StudioToday() {
           {people.list.length ? (
             <div className="st-people">
               {people.list.map(({ p, s: ps }) => (
-                <button key={p.id} className={`st-pp ${ps.due ? 'due' : ''}`} style={{ '--c': p.color || '#a78bfa' }} onClick={() => push('PersonDetail', { id: p.id })}>
+                <button key={p.id} className={`st-pp ${ps.due ? 'due' : ''}`} style={{ '--c': sc(p.color || '#a78bfa') }} onClick={() => push('PersonDetail', { id: p.id })}>
                   <span className="av">{(p.name || '?').slice(0, 1).toUpperCase()}{ps.due && <i />}</span>
                   <b className="ellipsis">{p.name}</b>
                   <small>{ps.since == null ? 'say hi' : ps.since === 0 ? 'today' : `${ps.since}d ago`}</small>

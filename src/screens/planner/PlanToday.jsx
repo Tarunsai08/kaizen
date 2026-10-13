@@ -204,8 +204,12 @@ export default function PlanBlock() {
   const [sel, setSel] = useState(null);
   const [pick, setPick] = useState(false);
   const stripRef = useRef(null);
+  const centered = useRef(null);
+  const topRef = useRef(null);
+  const firstDate = useRef(true);
+  useEffect(() => { if (firstDate.current) { firstDate.current = false; return; } topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [date]);
   useEffect(() => { const i = setInterval(() => setTick((x) => x + 1), 30000); return () => clearInterval(i); }, []);
-  useEffect(() => { const b = stripRef.current?.querySelector('button.on'); if (b) stripRef.current.scrollTo({ left: b.offsetLeft - stripRef.current.clientWidth / 2 + 22, behavior: 'smooth' }); }, [date]);
+  useEffect(() => { const s = stripRef.current, b = s?.querySelector('button.on'); if (!b || centered.current === date) return; const left = s.scrollLeft + b.getBoundingClientRect().left - s.getBoundingClientRect().left - (s.clientWidth - b.offsetWidth) / 2; s.scrollTo({ left, behavior: centered.current ? 'smooth' : 'auto' }); centered.current = date; });
   const ps = plannerSettings(settings);
   const isToday = date === t;
   const data = useLiveQuery(async () => ({
@@ -255,63 +259,11 @@ export default function PlanBlock() {
   const p0 = parse(date);
   return (
     <div>
-      {!ps.setupDone && (
-        <button className="card card-press row gap-14 mb-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlannerSetup')}>
-          <div className="swatch" style={{ background: 'color-mix(in srgb, var(--pl) 16%, transparent)' }}><Sparkles size={20} color="var(--pl)" /></div>
-          <div className="grow"><div className="h3">Set up your planner</div><div className="small muted">Wake time, peak hours, fixed commitments</div></div>
-          <ChevronRight size={18} className="muted" />
-        </button>
-      )}
-      {(
-        <>
-          <div className="row between" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <div className="row gap-6 wrap">
-              {chip && <span className="pl-chip">{chip}</span>}
-              {planned.length > 0 && <span className="pl-chip">{doneN}/{planned.length} done</span>}
-            </div>
-            <button className="pl-chip" style={ctx.lowEnergy ? { background: 'color-mix(in srgb, var(--goal) 22%, var(--surface-2))', color: 'var(--text)' } : null} onClick={async () => { await setLowEnergy(!ctx.lowEnergy); tap(); toast(ctx.lowEnergy ? 'Back to the normal plan' : 'Lighter plan for today'); }}><CloudRain size={14} /> Low energy</button>
-          </div>
-          {meta?.lowDay && <div className="small dim mt-8">Lighter plan today. Small steps count.</div>}
-          {meta?.note && meta.noteId !== data.seen && (
-            <div className="pl-note"><span>{meta.note}</span><button aria-label="Dismiss" onClick={() => setKV('planNoteSeen', meta.noteId)}><X size={16} /></button></div>
-          )}
-          <NowCard items={tl.items} onOpen={setSel} onPick={() => setPick(true)} />
-          {pull && <button className="btn block mt-8" onClick={async () => { await setKV('pull', { date: t, taskId: pull.taskId }); toast('Pulled forward'); }}><Sparkles size={15} /> {pull.text}</button>}
-          {risk.length > 0 && (
-            <button className="pl-risk" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlanWeek')}>
-              <div style={{ fontWeight: 650 }}>{risk.length === 1 ? `“${risk[0].title}” is at risk` : `${risk.length} tasks are at risk`}</div>
-              <div className="small dim mt-4">It needs more time than fits before the deadline. See options.</div>
-            </button>
-          )}
-        </>
-      )}
+      <div className="pd-head" ref={topRef}>
+        <div><b>{date === t ? 'Today' : date === addDays(t, -1) ? 'Yesterday' : date === addDays(t, 1) ? 'Tomorrow' : DAYS_SHORT[p0.getDay()]}</b><small>{DAYS_SHORT[p0.getDay()]}, {p0.getDate()} {MONTHS[p0.getMonth()]}</small></div>
+        {date !== t && <button className="pd-today" onClick={() => { tap(); setDate(t); }}>Back to today</button>}
+      </div>
       {tl.banners.length > 0 && <AllDay events={tl.banners} />}
-
-      <div className="mt-24" />
-      <DayNav date={date} today={t} onChange={setDate} />
-      <div className="datestrip" ref={stripRef}>
-        {days.map((d) => {
-          const p = parse(d);
-          return (
-            <button key={d} className={`${d === date ? 'on' : ''} ${d === t ? 'today' : ''}`} onClick={() => { tap(); setDate(d); }}>
-              <span className="tiny">{DAYS_SHORT[p.getDay()].slice(0, 2)}</span>
-              <span className="d">{p.getDate()}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="row gap-10 mb-16">
-        <button className="btn grow" onClick={add}><Plus size={18} /> Block</button>
-        <button className="btn grow" style={{ background: 'color-mix(in srgb, var(--bored) 16%, var(--surface-2))' }} onClick={() => push('Focus', {})}><Timer size={18} color="var(--bored)" /> Focus{data.focusMin ? ` · ${fmtDur(data.focusMin)}` : ''}</button>
-      </div>
-      {date >= t && <div className="mb-16"><StudySuggestions date={date} /></div>}
-      {inbox.length > 0 && (
-        <div className="mb-16">
-          <div className="eyebrow mb-8">Anytime · {inbox.length}</div>
-          <div className="list">{inbox.map((x) => <TaskRow key={x.id} t={x} showDate={false} />)}</div>
-        </div>
-      )}
 
       <div className="tl">
         <div className="tl-line" />
@@ -349,6 +301,63 @@ export default function PlanBlock() {
       </div>
       {!items.length && <div className="small muted center mt-16">Your day is open. Add a task and the plan fills in.</div>}
 
+      <div className="pd-pick">Pick another day</div>
+      <DayNav date={date} today={t} onChange={setDate} />
+      <div className="datestrip" ref={stripRef}>
+        {days.map((d) => {
+          const p = parse(d);
+          return (
+            <button key={d} className={`${d === date ? 'on' : ''} ${d === t ? 'today' : ''}`} onClick={() => { tap(); setDate(d); }}>
+              <span className="tiny">{DAYS_SHORT[p.getDay()].slice(0, 2)}</span>
+              <span className="d">{p.getDate()}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="row gap-10 mb-16">
+        <button className="btn grow" onClick={add}><Plus size={18} /> Block</button>
+        <button className="btn grow" style={{ background: 'color-mix(in srgb, var(--bored) 16%, var(--surface-2))' }} onClick={() => push('Focus', {})}><Timer size={18} color="var(--bored)" /> Focus{data.focusMin ? ` · ${fmtDur(data.focusMin)}` : ''}</button>
+      </div>
+      {date >= t && <div className="mb-16"><StudySuggestions date={date} /></div>}
+      {inbox.length > 0 && (
+        <div className="mb-16">
+          <div className="eyebrow mb-8">Anytime · {inbox.length}</div>
+          <div className="list">{inbox.map((x) => <TaskRow key={x.id} t={x} showDate={false} />)}</div>
+        </div>
+      )}
+
+      <div className="mt-24" />
+      {!ps.setupDone && (
+        <button className="card card-press row gap-14 mb-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlannerSetup')}>
+          <div className="swatch" style={{ background: 'color-mix(in srgb, var(--pl) 16%, transparent)' }}><Sparkles size={20} color="var(--pl)" /></div>
+          <div className="grow"><div className="h3">Set up your planner</div><div className="small muted">Wake time, peak hours, fixed commitments</div></div>
+          <ChevronRight size={18} className="muted" />
+        </button>
+      )}
+      {(
+        <>
+          <div className="row between" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <div className="row gap-6 wrap">
+              {chip && <span className="pl-chip">{chip}</span>}
+              {planned.length > 0 && <span className="pl-chip">{doneN}/{planned.length} done</span>}
+            </div>
+            <button className="pl-chip" style={ctx.lowEnergy ? { background: 'color-mix(in srgb, var(--goal) 22%, var(--surface-2))', color: 'var(--text)' } : null} onClick={async () => { await setLowEnergy(!ctx.lowEnergy); tap(); toast(ctx.lowEnergy ? 'Back to the normal plan' : 'Lighter plan for today'); }}><CloudRain size={14} /> Low energy</button>
+          </div>
+          {meta?.lowDay && <div className="small dim mt-8">Lighter plan today. Small steps count.</div>}
+          {meta?.note && meta.noteId !== data.seen && (
+            <div className="pl-note"><span>{meta.note}</span><button aria-label="Dismiss" onClick={() => setKV('planNoteSeen', meta.noteId)}><X size={16} /></button></div>
+          )}
+          <NowCard items={tl.items} onOpen={setSel} onPick={() => setPick(true)} />
+          {pull && <button className="btn block mt-8" onClick={async () => { await setKV('pull', { date: t, taskId: pull.taskId }); toast('Pulled forward'); }}><Sparkles size={15} /> {pull.text}</button>}
+          {risk.length > 0 && (
+            <button className="pl-risk" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlanWeek')}>
+              <div style={{ fontWeight: 650 }}>{risk.length === 1 ? `“${risk[0].title}” is at risk` : `${risk.length} tasks are at risk`}</div>
+              <div className="small dim mt-4">It needs more time than fits before the deadline. See options.</div>
+            </button>
+          )}
+        </>
+      )}
       <div className="list mt-24">
         <button className="list-item" onClick={() => push('PlanWeek')}><CalendarRange size={18} className="muted" /><span className="grow">This week</span><ChevronRight size={16} className="muted" /></button>
         <button className="list-item" onClick={() => push('FixedSchedule')}><CalendarClock size={18} className="muted" /><span className="grow">Fixed schedule</span><ChevronRight size={16} className="muted" /></button>

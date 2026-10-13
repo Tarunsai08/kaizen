@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Palette, Moon, CalendarClock, CalendarDays, Bell, LayoutGrid, Shield, ChevronRight, ChevronLeft, Download, Upload, Trash2, Tags, Lock,
-  Search, Check, Volume2, Sunrise, Footprints, HeartPulse, Info, ChevronDown,
+  Search, Check, Volume2, Sunrise, Footprints, HeartPulse, Info, ChevronDown, ArrowUp, ArrowDown, X, Plus, Pin,
 } from 'lucide-react';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -15,7 +15,7 @@ import { isNative, isAndroid, Kaizen, success, tap } from '../../lib/native';
 import { rescheduleAll, ensurePermission, notifyNow } from '../../lib/notify';
 import { Sheet, Seg, Toggle, Confirm } from '../../ui/kit';
 import StylePicker from '../../studio/StylePicker';
-import { isStudio, journeyOn } from '../../studio/mode';
+import { isStudio, journeyOn, NAV_CHOICES, defaultNav, navKey } from '../../studio/mode';
 import { TODAY_LAYOUTS } from '../today/index';
 import { MODULES } from '../planner/More';
 import { plannerSettings, syncCalendar, replan } from '../../planner/service';
@@ -138,6 +138,7 @@ function Look() {
         </Item>
         {!studio && <Item label="Today layout" help="How the Today tab looks in Classic"><Pills value={settings.todayLayout || 'classic'} onChange={(v) => set('todayLayout', v)} options={TODAY_LAYOUTS} /></Item>}
       </Section>
+      <NavEditor />
       <Section title="Study">
         <Item label="Study style" help="Learning journey: a step-by-step path with a celebration after each lesson" wide><Pills value={journeyOn(settings) ? 'journey' : 'roadmap'} onChange={(v) => set('studyStyle', v)} options={[{ value: 'journey', label: 'Learning journey' }, { value: 'roadmap', label: 'Roadmaps' }]} /></Item>
         {!journeyOn(settings) && <Item label="Roadmap look"><Pills value={settings.roadmapStyle || 'route'} onChange={(v) => set('roadmapStyle', v)} options={[{ value: 'route', label: 'List' }, { value: 'path', label: 'Winding path' }]} /></Item>}
@@ -146,6 +147,40 @@ function Look() {
         <Item label="Sound effects" help="Little chimes when you finish things" icon={Volume2}><Toggle on={settings.sound !== false} onChange={(v) => set('sound', v)} /></Item>
       </Section>
     </>
+  );
+}
+
+/** Choose the bottom bar: Today is fixed first, then up to four pages in any order. */
+function NavEditor() {
+  const { settings } = useApp();
+  const studio = isStudio(settings);
+  const k = navKey(studio);
+  const cur = Array.isArray(settings[k]) && settings[k].length ? settings[k] : defaultNav(studio);
+  const save = (arr) => { tap(); setKV(k, arr); };
+  const move = (i, d) => { const a = [...cur]; const [x] = a.splice(i, 1); a.splice(i + d, 0, x); save(a); };
+  const label = (key) => NAV_CHOICES.find((c) => c.key === key)?.label || key;
+  const rest = NAV_CHOICES.filter((c) => !cur.includes(c.key));
+  return (
+    <Section title="Bottom bar" note={cur.length >= 4 ? 'The bar holds Today plus four pages. Remove one to add another.' : 'Pages you leave out stay one tap away — from Spaces or the links on Today.'}>
+      <div className="set-nav">
+        <div className="nv fixed"><Pin size={14} /><span className="grow">Today</span><small>always first</small></div>
+        {cur.map((key, i) => (
+          <div key={key} className="nv">
+            <span className="n num">{i + 2}</span>
+            <span className="grow">{label(key)}</span>
+            <button disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up"><ArrowUp size={16} /></button>
+            <button disabled={i === cur.length - 1} onClick={() => move(i, 1)} aria-label="Move down"><ArrowDown size={16} /></button>
+            <button disabled={cur.length <= 1} onClick={() => save(cur.filter((x) => x !== key))} aria-label="Remove"><X size={16} /></button>
+          </div>
+        ))}
+      </div>
+      {rest.length > 0 && (
+        <div className="set-navadd">
+          {rest.map((c) => <button key={c.key} disabled={cur.length >= 4} onClick={() => save([...cur, c.key])}><Plus size={14} /> {c.label}</button>)}
+        </div>
+      )}
+      <button className="set-reset" onClick={() => save(defaultNav(studio))}>Reset to default</button>
+    </Section>
   );
 }
 

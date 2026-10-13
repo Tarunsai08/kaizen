@@ -97,3 +97,8 @@
 .ad-h .chev { transition: transform 0.25s; color: var(--muted); }
 .ad.open .ad-h .chev { transform: rotate(90deg); }
 .ad-list { padding: 0 12px 10px 35px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--text-2); }
+.pd-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 2px 10px; scroll-margin-top: 140px; }
+.pd-head b { display: block; font-size: 20px; font-weight: 760; letter-spacing: -0.02em; }
+.pd-head small { display: block; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.pd-today { height: 32px; padding: 0 12px; border-radius: 16px; font-size: 13px; font-weight: 700; color: var(--pl); background: color-mix(in srgb, var(--pl) 14%, transparent); }
+.pd-pick { margin: 26px 2px 10px; font-size: 13px; font-weight: 700; color: var(--muted); }

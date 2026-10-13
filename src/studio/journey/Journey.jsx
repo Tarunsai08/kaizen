@@ -16,9 +16,11 @@ import { findNode, isLeaf, firstUndone, lastCompleted, subjectTally } from '../.
 import { useStudy, useStudyToday, AddSubjectSheet } from '../../screens/Study';
 import { useSubject } from '../../screens/Roadmap';
 import { useXP } from '../../screens/You';
+import { softColor } from '../mode';
 import './journey.css';
 
 const leavesOf = (n) => { const out = []; const go = (x) => (isLeaf(x) ? out.push(x) : (x.children || []).forEach(go)); go(n); return out; };
+const tint = (subject, settings) => ({ '--sc': softColor(subject?.color || '#f7931e', settings.theme !== 'light') });
 const pad2 = (n) => String(n).padStart(2, '0');
 const hash = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
 const ART = [Rocket, Plane, Magnet, Atom, Telescope, Puzzle, Compass, Sigma, Binary, Database, Network, Cpu, Layers, Lightbulb, Brain, Code];
@@ -122,13 +124,13 @@ export function StudyHome() {
 
 /* ================================================================ subject: chapters */
 export function SubjectJourney({ sid }) {
-  const { push, pop } = useApp();
+  const { push, pop, settings } = useApp();
   const { subject, done, loading } = useSubject(sid);
   if (loading || !subject) return <div className="screen no-nav bj" />;
   const tal = subjectTally(subject, done);
   const next = firstUndone(subject.children, done);
   return (
-    <div className="screen no-nav page-enter bj bj-chs">
+    <div className="screen no-nav page-enter bj bj-chs" style={tint(subject, settings)}>
       <div className="bj-decoTR"><Spot seed={subject.title} size={150} /></div>
       <button className="bj-back" onClick={pop} aria-label="Back"><ArrowLeft size={22} /></button>
       <h1 className="bj-title">{subject.title}</h1>
@@ -157,7 +159,7 @@ export function SubjectJourney({ sid }) {
 
 /* ================================================================ chapter: Learn / Active Learn / Exercise */
 export function ChapterJourney({ sid, id }) {
-  const { push, pop } = useApp();
+  const { push, pop, settings } = useApp();
   const { subject, done, loading } = useSubject(sid);
   const [tab, setTab] = useState('learn');
   if (loading || !subject) return <div className="screen no-nav bj" />;
@@ -172,7 +174,7 @@ export function ChapterJourney({ sid, id }) {
   const open = (c) => (isLeaf(c) ? push('Lesson', { sid, id: c.id }) : push('ConceptPath', { sid, id: c.id }));
 
   return (
-    <div className="screen no-nav page-enter bj bj-ch">
+    <div className="screen no-nav page-enter bj bj-ch" style={tint(subject, settings)}>
       <div className="bj-decoTR"><Spot seed={ch.title} size={160} /><Rocket className="f1" size={22} /><Lightbulb className="f2" size={20} /></div>
       <button className="bj-back" onClick={pop} aria-label="Back"><ArrowLeft size={22} /></button>
       <h1 className="bj-title">{ch.title.replace(/^Step \d+:\s*/, '')}</h1>
@@ -216,13 +218,13 @@ export function ChapterJourney({ sid, id }) {
 
 /* ================================================================ concept path (pins on a dashed trail) */
 export function ConceptPath({ sid, id }) {
-  const { pop } = useApp();
+  const { pop, settings } = useApp();
   const { subject, done, loading } = useSubject(sid);
   if (loading || !subject) return <div className="screen no-nav bj" />;
   const hit = findNode(subject, id);
   if (!hit) return <div className="screen no-nav bj" />;
   return (
-    <div className="screen no-nav page-enter bj bj-pathpage">
+    <div className="screen no-nav page-enter bj bj-pathpage" style={tint(subject, settings)}>
       <button className="bj-back2" onClick={pop} aria-label="Back"><ArrowLeft size={22} /><i /></button>
       <PathMap sid={sid} leaves={leavesOf(hit.node)} done={done} />
     </div>
@@ -263,7 +265,7 @@ function PathMap({ sid, leaves, done, embedded }) {
 
   return (
     <div className={`bj-map ${embedded ? 'emb' : ''}`} ref={wrap} style={{ height: h }}>
-      {!embedded && <Decor h={h} />}
+      <Decor h={h} />
       <svg className="bj-trail" width={w} height={h}><path d={d} /></svg>
       {leaves.map((l, i) => {
         const st = done.has(l.id) ? 'done' : i === cur ? 'cur' : 'todo';
@@ -297,19 +299,21 @@ function PathMap({ sid, leaves, done, embedded }) {
 }
 
 /* the yellow blobs, cream circles and dots behind the path (one SVG per 900px tile) */
-const DOTS = [[46, 160], [250, 110], [80, 330], [320, 400], [30, 560], [230, 610], [330, 760], [110, 820]];
+const DOTS = [[70, 150], [250, 110], [100, 330], [300, 420], [64, 610], [230, 640], [290, 780], [120, 820]];
+// Each tile is 900px tall; the side bands start and end at the same width with vertical tangents, so they flow on
+// without a seam however far you scroll.
 function Decor({ h }) {
   const tiles = Math.ceil(h / 900);
   return (
     <div className="bj-decor" aria-hidden="true">
       {Array.from({ length: tiles }, (_, t) => (
-        <svg key={t} className="tile" style={{ top: t * 900 }} viewBox="0 0 360 900" preserveAspectRatio="xMidYMin slice">
-          <ellipse className="cream" cx="380" cy="270" rx="120" ry="190" />
-          <path className="blob" d="M360 150 C305 185 270 240 282 292 C294 340 330 365 360 400Z" />
-          <ellipse className="cream" cx="-10" cy="760" rx="110" ry="140" />
-          <path className="blob" d="M0 690 C40 700 66 745 58 792 C52 830 74 862 104 900 L0 900Z" />
+        <svg key={t} className="tile" style={{ top: t * 900 }} viewBox="0 0 360 900" preserveAspectRatio="none">
+          <ellipse className="cream" cx="300" cy="300" rx="90" ry="150" />
+          <ellipse className="cream" cx="60" cy="720" rx="80" ry="120" />
+          <path className="blob" d="M0 0 L38 0 C38 120 120 170 118 300 C116 420 30 470 34 580 C38 700 96 760 70 840 C58 875 38 885 38 900 L0 900 Z" />
+          <path className="blob" d="M360 0 L322 0 C322 90 250 140 262 260 C274 380 340 430 330 540 C320 660 236 700 250 800 C258 860 322 870 322 900 L360 900 Z" />
           {DOTS.map(([x, y], i) => (i % 3 === 0
-            ? <path key={i} className="dot" d={`M${x} ${y} q6 -10 12 0 q-6 8 -12 0Z`} transform={`rotate(-30 ${x} ${y})`} />
+            ? <path key={i} className="dot" d={`M${x} ${y} q6 -10 12 0 q-6 8 -12 0Z`} />
             : <circle key={i} className="dot" cx={x} cy={y} r="4.5" />))}
         </svg>
       ))}
@@ -319,7 +323,7 @@ function Decor({ h }) {
 
 /* ================================================================ after a lesson */
 export function LessonDone({ sid, id, mins = 0 }) {
-  const { push, pop } = useApp();
+  const { push, pop, settings } = useApp();
   const { subject, done, loading } = useSubject(sid);
   const [count, setCount] = useState(6);
   const [hold, setHold] = useState(false);
@@ -340,7 +344,7 @@ export function LessonDone({ sid, id, mins = 0 }) {
   const back = () => { setHold(true); pop(); if (concept) setTimeout(() => push(concept.id === chapter?.id ? 'ChapterJourney' : 'ConceptPath', { sid, id: concept.id }), 0); };
   if (loading || !hit) return <div className="screen no-nav bj" />;
   return (
-    <div className="bj bj-done">
+    <div className="bj bj-done" style={tint(subject, settings)}>
       <Decor h={900} />
       <div className="bj-confetti">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{ '--a': `${i * 22.5}deg`, '--d': `${(i % 4) * 50}ms` }} />)}</div>
       <div className="medal">{conceptDone ? <Trophy size={50} /> : <Check size={56} strokeWidth={3.2} />}</div>

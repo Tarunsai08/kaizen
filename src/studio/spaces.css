@@ -11,7 +11,7 @@
 .sp-search input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; color: var(--text); font-size: 15px; }
 .sp-search input::placeholder { color: var(--muted); }
 .sp-h { display: flex; align-items: center; gap: 6px; margin: 28px 4px 10px; font-size: 13px; font-weight: 700; color: var(--muted); }
-.sp-recent { display: flex; gap: 10px; overflow-x: auto; margin: 0 -18px; padding: 2px 18px 6px; scroll-snap-type: x proximity; }
+.sp-recent { display: flex; gap: 10px; overflow-x: auto; margin: 0 -18px; padding: 2px 18px 6px; scroll-snap-type: x proximity; scroll-padding: 0 18px; }
 .sp-card { position: relative; width: 140px; flex-shrink: 0; scroll-snap-align: start; display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 0 12px 12px; border-radius: 18px; overflow: hidden; background: var(--surface); box-shadow: var(--z-card); transition: transform 0.35s var(--spring); }
 .sp-card:active { transform: scale(0.96); }
 .sp-card .cover { display: block; height: 46px; margin: 0 -12px; align-self: stretch; background: linear-gradient(135deg, color-mix(in srgb, var(--c) 34%, var(--surface)), color-mix(in srgb, var(--c) 10%, var(--surface))); }
