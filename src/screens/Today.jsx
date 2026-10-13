@@ -18,7 +18,7 @@ import { useXP, companionMood } from './You';
 import { useEnergy } from './Health';
 import { personStatus, Avatar } from './People';
 import { YesterdayPrompt } from './TodayLayouts';
-import { LAYOUTS } from './today';
+import { LAYOUTS } from './today/index';
 import TodayZen from './today/Zen';
 
 export default function Today() {

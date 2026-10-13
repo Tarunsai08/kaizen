@@ -9,7 +9,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { db, setKV, exportAll, importAll } from '../db';
 import { useApp } from '../ctx';
 import { today, fmtHM } from '../lib/date';
-import { TODAY_LAYOUTS } from './today';
+import { TODAY_LAYOUTS } from './today/index';
 import { PlannerSettings } from './planner/Setup';
 import { TopBar, Field, Sheet, Seg, Toggle, Stat, Confirm, EmojiPicker, ColorPicker, Chips } from '../ui/kit';
 import { isNative, success } from '../lib/native';
