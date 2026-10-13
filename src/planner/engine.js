@@ -68,6 +68,17 @@ export function usePlannerEngine(ready, settings) {
     timer.current = setTimeout(() => run(reason), p ? 500 : 50);
   }, [parts]);
 
+  // one-time cleanup: remove the study to-dos an earlier version added automatically (only unfinished, app-made ones)
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      if (await getKV('studyTasksCleared', false)) return;
+      const auto = await db.tasks.filter((x) => x.auto === true && !!x.study && !x.done).primaryKeys();
+      if (auto.length) await db.tasks.bulkDelete(auto);
+      await setKV('studyTasksCleared', true);
+    })();
+  }, [ready]);
+
   // calendar: on open, on resume, and live through the content observer
   useEffect(() => {
     if (!ready) return;
