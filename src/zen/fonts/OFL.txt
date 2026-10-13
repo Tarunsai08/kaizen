@@ -1,0 +1,5 @@
+Fraunces — Copyright 2020 The Fraunces Project Authors (github.com/undercasetype/Fraunces)
+Plus Jakarta Sans — Copyright 2020 The Plus Jakarta Sans Project Authors (github.com/tokotype/PlusJakartaSans)
+
+Both fonts are licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org).
+Only the Latin variable-weight subsets are bundled here.

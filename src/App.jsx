@@ -111,14 +111,15 @@ export default function App() {
   useEffect(() => { setSoundEnabled(settings.sound); }, [settings.sound]);
   // theme
   useEffect(() => {
-    document.documentElement.dataset.theme = settings.theme; applyPlColor(settings.plannerColor, settings.theme);
+    document.documentElement.dataset.theme = settings.theme; document.documentElement.dataset.ui = settings.uiStyle === 'zen' ? 'zen' : 'classic'; applyPlColor(settings.plannerColor, settings.theme);
     const meta = document.querySelector('meta[name=theme-color]');
-    if (meta) meta.content = settings.theme === 'light' ? '#f4f4f1' : '#000000';
+    const zen = settings.uiStyle === 'zen';
+    if (meta) meta.content = settings.theme === 'light' ? (zen ? '#f6f5f1' : '#f4f4f1') : (zen ? '#0e0e10' : '#000000');
     if (isNative) {
       StatusBar.setStyle({ style: settings.theme === 'light' ? Style.Light : Style.Dark }).catch(() => {});
-      StatusBar.setBackgroundColor({ color: settings.theme === 'light' ? '#f4f4f1' : '#000000' }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: settings.theme === 'light' ? (zen ? '#f6f5f1' : '#f4f4f1') : (zen ? '#0e0e10' : '#000000') }).catch(() => {});
     }
-  }, [settings.theme, settings.plannerColor]);
+  }, [settings.theme, settings.plannerColor, settings.uiStyle]);
 
   const push = useCallback((name, props = {}) => { tap(); setStack((s) => [...s, { name, props, key: Math.random() }]); }, []);
   const pop = useCallback(() => setStack((s) => s.slice(0, -1)), []);

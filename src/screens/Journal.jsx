@@ -183,7 +183,7 @@ function NightReviewFor({ t }) {
     <div className="timer-screen" style={{ overflowY: 'auto' }}>
       <div className="row gap-10">
         <div className="step-dots grow">{steps.map((s, i) => <i key={s} className={i <= step ? 'on' : ''} />)}</div>
-        <button className="icon-btn" onClick={pop}><X size={20} /></button>
+        <button className="icon-btn" onClick={pop} aria-label="Close"><X size={20} /></button>
       </div>
       <div className="grow col" style={{ paddingTop: 24, gap: 16 }}>
         {cur === 'glance' && (
