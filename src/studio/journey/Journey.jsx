@@ -29,12 +29,11 @@ const hasVideo = (leaf) => (leaf.resources || []).some((r) => r.medium === 'vide
 
 /** A soft round spot with an icon — stands in for BYJU'S card illustrations. */
 function Spot({ seed, size = 92 }) {
-  const I = ART[hash(seed) % ART.length], J = ART[(hash(seed) >> 3) % ART.length];
+  const I = ART[hash(seed) % ART.length];
   const tone = hash(seed) % 3;
   return (
     <span className={`bj-spot t${tone}`} style={{ width: size, height: size }}>
       <I size={size * 0.42} strokeWidth={1.7} className="a" />
-      <J size={size * 0.2} strokeWidth={2} className="b" />
     </span>
   );
 }
@@ -299,21 +298,20 @@ function PathMap({ sid, leaves, done, embedded }) {
 }
 
 /* the yellow blobs, cream circles and dots behind the path (one SVG per 900px tile) */
-const DOTS = [[70, 150], [250, 110], [100, 330], [300, 420], [64, 610], [230, 640], [290, 780], [120, 820]];
-// Each tile is 900px tall; the side bands start and end at the same width with vertical tangents, so they flow on
-// without a seam however far you scroll.
+const DOTS = [[46, 160], [250, 110], [80, 330], [320, 440], [30, 520], [230, 610], [330, 760], [150, 850]];
+// One 900px tile repeats down the path. Every shape closes inside its tile, so nothing is sliced where tiles meet.
 function Decor({ h }) {
   const tiles = Math.ceil(h / 900);
   return (
     <div className="bj-decor" aria-hidden="true">
       {Array.from({ length: tiles }, (_, t) => (
         <svg key={t} className="tile" style={{ top: t * 900 }} viewBox="0 0 360 900" preserveAspectRatio="none">
-          <ellipse className="cream" cx="300" cy="300" rx="90" ry="150" />
-          <ellipse className="cream" cx="60" cy="720" rx="80" ry="120" />
-          <path className="blob" d="M0 0 L38 0 C38 120 120 170 118 300 C116 420 30 470 34 580 C38 700 96 760 70 840 C58 875 38 885 38 900 L0 900 Z" />
-          <path className="blob" d="M360 0 L322 0 C322 90 250 140 262 260 C274 380 340 430 330 540 C320 660 236 700 250 800 C258 860 322 870 322 900 L360 900 Z" />
+          <ellipse className="cream" cx="380" cy="270" rx="120" ry="190" />
+          <path className="blob" d="M360 150 C305 185 270 240 282 292 C294 340 330 365 360 400Z" />
+          <ellipse className="cream" cx="-10" cy="730" rx="110" ry="130" />
+          <path className="blob" d="M0 610 C34 618 62 652 60 700 C58 742 82 772 74 812 C68 842 44 868 0 876Z" />
           {DOTS.map(([x, y], i) => (i % 3 === 0
-            ? <path key={i} className="dot" d={`M${x} ${y} q6 -10 12 0 q-6 8 -12 0Z`} />
+            ? <path key={i} className="dot" d={`M${x} ${y} q6 -10 12 0 q-6 8 -12 0Z`} transform={`rotate(-30 ${x} ${y})`} />
             : <circle key={i} className="dot" cx={x} cy={y} r="4.5" />))}
         </svg>
       ))}
