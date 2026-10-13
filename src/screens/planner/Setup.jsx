@@ -134,6 +134,8 @@ export function PlannerSettings() {
       </Field>
       <div className="row gap-8"><button className="btn grow" onClick={() => push('FixedSchedule')}>Fixed schedule</button><button className="btn grow" onClick={() => push('PlannerSetup')}>Run setup again</button></div>
 
+      <div className="card flat row between"><div><div style={{ fontWeight: 600 }}>Plan my study</div><div className="small muted">Each subject’s next lesson becomes a task for today, sized to its daily goal</div></div><Toggle on={ps.studyAuto !== false} onChange={(v) => set({ studyAuto: v })} /></div>
+
       <div className="eyebrow mt-8">Calendar</div>
       <CalendarPicker />
       <Field label="Calendar events starting with this become task suggestions"><input className="input" value={ps.taskPrefix} onChange={(e) => set({ taskPrefix: e.target.value })} /></Field>

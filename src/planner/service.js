@@ -1,7 +1,8 @@
 // Glue between Kaizen's data (Dexie) and the pure scheduler. Everything here is on-device.
 import { db, getKV, setKV, DEFAULT_SETTINGS } from '../db';
 import { today, addDays, parse, hmToMin, ymd, dayOf } from '../lib/date';
-import { sleepMinutes } from '../lib/logic';
+import { sleepMinutes, completeTask } from '../lib/logic';
+import { ensureSubjects, firstUndone } from '../lib/study';
 import { buildPlan, estimateHours, updateCorrection, updateEnergy, DEFAULT_FACTORS } from '../scheduler';
 
 export const BLOCK_TYPES = [
@@ -240,4 +241,36 @@ export function taskEstimate(t, settings, detail = false) {
     hours = e.hours; guessed = e.guessed;
   }
   return detail ? { hours, guessed } : { text: `~${hours < 1 ? Math.round(hours * 60) + 'm' : Math.round(hours * 10) / 10 + 'h'}${guessed ? '' : ''}`, hours };
+}
+
+const studyCat = (title) => (/dsa|algo/i.test(title) ? 'ALGORITHM' : /design/i.test(title) ? 'SYSTEM_DESIGN' : /ml|dl|learning|math|stat/i.test(title) ? 'EXAM_PREP' : 'OTHER');
+/** Turn each active study subject's next lesson into a task for today, so the planner schedules it like any other work.
+ *  One per subject per day; an unfinished one rolls forward instead of piling up; it closes itself when the lesson is done. */
+export async function syncStudyTasks(settings) {
+  const ps = plannerSettings(settings);
+  if (ps.studyAuto === false || settings.modules?.study === false) return false;
+  await ensureSubjects();
+  const [subjects, prog, rows] = await Promise.all([db.subjects.toArray(), db.progress.toArray(), db.tasks.toArray()]);
+  const done = new Set(prog.filter((x) => x.done).map((x) => x.id));
+  const t = today();
+  let changed = false;
+  for (const x of rows) if (x.study && !x.done && done.has(x.study.id)) { await completeTask(x, true); changed = true; }
+  for (const sub of subjects) {
+    if (sub.active === false) continue;
+    const next = firstUndone(sub.children, done);
+    if (!next) continue;
+    const mine = rows.filter((x) => x.study?.sid === sub.sid);
+    const open = mine.find((x) => !x.done && !x.skipped && !done.has(x.study.id));
+    const mins = sub.dailyMins || 30;
+    if (open) {
+      const patch = {};
+      if (open.study.id !== next.id) { patch.study = { sid: sub.sid, id: next.id }; patch.title = `${sub.title}: ${next.title}`; }
+      if (open.due && open.due < t) patch.due = t;
+      if (Object.keys(patch).length) { await db.tasks.update(open.id, patch); changed = true; }
+    } else if (!mine.some((x) => x.due === t)) {
+      await db.tasks.add({ title: `${sub.title}: ${next.title}`, description: '', due: t, reminder: 0, duration: mins, estHours: mins / 60, difficulty: 2, pcat: studyCat(sub.title), done: false, createdAt: Date.now(), priority: 'none', recurrence: 'none', subtasks: [], study: { sid: sub.sid, id: next.id }, auto: true });
+      changed = true;
+    }
+  }
+  return changed;
 }

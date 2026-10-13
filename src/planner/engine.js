@@ -6,7 +6,7 @@ import { db, getKV, setKV } from '../db';
 import { today } from '../lib/date';
 import { Kaizen, isAndroid } from '../lib/native';
 import { notifyNow, rescheduleSoon } from '../lib/notify';
-import { replan, syncCalendar, plannerSettings, editSession, hm12 } from './service';
+import { replan, syncStudyTasks, syncCalendar, plannerSettings, editSession, hm12 } from './service';
 
 export function usePlannerEngine(ready, settings) {
   const settingsRef = useRef(settings);
@@ -17,6 +17,7 @@ export function usePlannerEngine(ready, settings) {
 
   const run = async (reason) => {
     const s = settingsRef.current;
+    try { await syncStudyTasks(s); } catch (e) { console.warn('study sync', e); }
     const out = await replan(s, reason);
     rescheduleSoon();
     if (!out) return;
@@ -37,6 +38,7 @@ export function usePlannerEngine(ready, settings) {
   const parts = useLiveQuery(async () => {
     if (!ready) return null;
     const t = today();
+    const study = JSON.stringify([(await db.progress.filter((x) => x.done).count()), (await db.subjects.toArray()).map((x) => [x.sid, x.active, x.dailyMins])]);
     const [tasks, fixed, cal, moods, sleep, journal, fin, low, pull] = await Promise.all([
       db.tasks.toArray(), db.fixedBlocks.toArray(), db.calEvents.toArray(), db.moods.where('date').equals(t).toArray(),
       db.sleep.where('date').equals(t).first(), db.journal.where('date').equals(t).first(),
@@ -44,7 +46,7 @@ export function usePlannerEngine(ready, settings) {
     ]);
     return {
       tasks: JSON.stringify([tasks.filter((x) => !x.done && !x.skipped).map((x) => [x.id, x.due, x.dueTime, x.difficulty, x.estHours, x.pcat, x.recurrence, x.plan, x.duration, (x.subtasks || []).map((s) => [s.id, s.done, s.difficulty, s.estHours])]), tasks.filter((x) => x.done).length]),
-      fixed: JSON.stringify(fixed),
+      fixed: JSON.stringify(fixed), study,
       cal: JSON.stringify(cal.map((e) => [e.id, e.start, e.end, e.treatAs])),
       checkin: JSON.stringify([moods.map((m) => [m.id, m.mood, m.energy]), sleep && [sleep.wakeTs, sleep.bedTs], journal && journal.id, low, pull]),
       sessions: JSON.stringify(fin.map((s) => [s.id, s.state, s.pinned, s.start, s.end, s.date])),
@@ -61,7 +63,7 @@ export function usePlannerEngine(ready, settings) {
       if (p.checkin !== parts.checkin) reason = 'checkin';
       else if (p.sessions !== parts.sessions) reason = /SKIPPED/.test(parts.sessions) && parts.sessions.split('SKIPPED').length > p.sessions.split('SKIPPED').length ? 'skip' : /PARTIAL/.test(parts.sessions) && parts.sessions.split('PARTIAL').length > p.sessions.split('PARTIAL').length ? 'partial' : 'edit';
       else if (p.cal !== parts.cal) reason = 'calendar';
-      else if (p.tasks !== parts.tasks || p.fixed !== parts.fixed || p.prefs !== parts.prefs) reason = 'edit';
+      else if (p.tasks !== parts.tasks || p.fixed !== parts.fixed || p.prefs !== parts.prefs || p.study !== parts.study) reason = 'edit';
       else return;
     }
     clearTimeout(timer.current);
