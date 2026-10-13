@@ -52,6 +52,14 @@ db.version(3).stores({
   apps: '++id',
 });
 
+// v4: adaptive planner (fixed schedule, planned sessions, work logs, cached calendar events)
+db.version(4).stores({
+  fixedBlocks: '++id',
+  plannedSessions: '++id, date, taskId, state',
+  workLogs: '++id, sessionId, taskId, date',
+  calEvents: '&id, start',
+});
+
 /* ---------- key/value settings ---------- */
 export async function getKV(key, fallback) {
   const row = await db.kv.get(key);
@@ -98,6 +106,9 @@ export const DEFAULT_SETTINGS = {
   dayStart: '06:00',
   earlyStart: '',
   todayLayout: 'classic',
+  planner: { sessionMin: 50, breakMin: 10, capacityH: 6, bufferMin: 10, deadlineBufferDays: 1, factors: {}, calendars: [], taskPrefix: '[T]', wrapTime: '21:30', alertSession: true, alertWrap: true, alertRisk: true, setupDone: false },
+  modules: { study: true, money: true, boredom: true, mind: true, screen: true, journal: true, people: true },
+  plannerStats: { correction: {}, energy: {} },
 };
 
 /* ---------- seed on first run ---------- */
@@ -174,7 +185,7 @@ export async function seed() {
 
 /* ---------- backup ---------- */
 export async function exportAll() {
-  const out = { app: 'kaizen', version: 1, exportedAt: new Date().toISOString(), tables: {} };
+  const out = { app: 'kaizen', version: 2, exportedAt: new Date().toISOString(), tables: {} };
   for (const t of db.tables) out.tables[t.name] = await t.toArray();
   return out;
 }

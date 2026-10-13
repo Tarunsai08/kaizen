@@ -210,7 +210,7 @@ export function useToday() {
   const go = {
     you: () => push('You'), plan: () => goTab('plan'), habits: () => goTab('habits'), study: () => goTab('study'),
     addTask: () => push('TaskForm', { due: t }), addHabit: () => push('HabitForm', {}), money: () => push('MoneyScreen'),
-    bored: () => push('Boredom'), insights: () => push('Insights'), goals: () => goTab('plan'),
+    bored: () => push('Boredom'), insights: () => push('PlannerInsights'), goals: () => goTab('plan'),
   };
   return { D, logHabit, toggleTask, openTask, openHabit, go };
 }

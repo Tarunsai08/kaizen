@@ -10,26 +10,31 @@ import { Bars, HBars, Line } from '../ui/charts';
 import { TaskRow, GoalCard, SectionHead, GOAL_TYPE_COLOR } from '../ui/rows';
 import { success, tap } from '../lib/native';
 import { SubTabs, useSub } from '../ui/kit';
-import { DayView } from './Day';
+import { CATEGORIES, estLabel } from '../scheduler';
+import './planner/planner.css';
+import { taskEstimate, plannerSettings } from '../planner/service';
+import { CalendarRange, GripVertical } from 'lucide-react';
+import { getKV } from '../db';
 import { PeopleView } from './People';
 
 /* =========================================================
    PLAN TAB (Tasks + Goals)
    ========================================================= */
 export function Plan() {
-  const [view, setView] = useSub('plan', 'day');
+  const [view, setView] = useSub('plan', 'tasks');
+  const { push } = useApp();
   return (
     <div className="screen fade-in">
-      <div className="titlebar"><h1 className="h1">Plan</h1></div>
-      <SubTabs value={view} onChange={setView} options={[['day', 'Day'], ['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
-      {view === 'day' ? <DayView /> : view === 'tasks' ? <TasksView /> : view === 'goals' ? <GoalsView /> : <PeopleView />}
+      <div className="titlebar"><h1 className="h1">Plan</h1><button className="icon-btn" onClick={() => push('PlanWeek')} aria-label="Week plan"><CalendarRange size={19} /></button></div>
+      <SubTabs value={view} onChange={setView} options={[['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
+      {view === 'tasks' ? <TasksView /> : view === 'goals' ? <GoalsView /> : <PeopleView />}
     </div>
   );
 }
 
 function TasksView() {
-  const { push } = useApp();
-  const [v, setV] = useState('today');
+  const { push, settings } = useApp();
+  const [v, setV] = useState('plan');
   const [quick, setQuick] = useState('');
   const t = today();
   const data = useLiveQuery(async () => ({
@@ -38,35 +43,34 @@ function TasksView() {
     projects: await db.projects.toArray(),
     goals: await db.goals.toArray(),
     cats: await db.categories.where('kind').equals('task').toArray(),
+    meta: await getKV('planMeta', null),
   }), []);
   if (!data) return null;
-  const { tasks, all, projects, goals, cats } = data;
+  const { tasks, all, projects, goals, cats, meta } = data;
+  const risk = new Set((meta?.atRisk || []).map((r) => r.taskId));
   const open = tasks.filter((x) => !x.done);
   const prio = { high: 0, medium: 1, low: 2 };
   const sortT = (l) => l.sort((a, b) => (a.due || '9').localeCompare(b.due || '9') || (prio[a.priority] ?? 3) - (prio[b.priority] ?? 3));
   const addQuick = async () => {
     if (!quick.trim()) return;
-    await db.tasks.add({ title: quick.trim(), due: v === 'someday' ? null : v === 'upcoming' ? addDays(t, 1) : t, done: false, createdAt: Date.now(), subtasks: [], priority: 'none', recurrence: 'none' });
+    await db.tasks.add({ title: quick.trim(), due: t, done: false, createdAt: Date.now(), subtasks: [], priority: 'none', recurrence: 'none' });
     setQuick(''); tap();
   };
   let body = null;
-  if (v === 'today') {
-    const l = sortT(open.filter((x) => x.due && x.due <= t));
+  if (v === 'plan') {
     const doneToday = tasks.filter((x) => x.done && x.doneAt && dayOf(x.doneAt) === t);
+    const groups = [
+      ['Today', sortT(open.filter((x) => x.due && x.due <= t))],
+      ['This week', sortT(open.filter((x) => x.due && x.due > t && x.due <= addDays(t, 6)))],
+      ['Later', sortT(open.filter((x) => x.due && x.due > addDays(t, 6)))],
+      ['Someday', open.filter((x) => !x.due)],
+    ].filter(([, l]) => l.length);
     body = <>
-      {l.length ? <div className="list">{l.map((x) => <TaskRow key={x.id} t={x} showDate={x.due !== t} projects={projects} goals={goals} />)}</div> : <Empty icon="☀️" title="Clear for today" sub="Add something or enjoy the space." />}
+      {groups.length ? groups.map(([name, l]) => (
+        <div key={name} className="mb-16"><div className="eyebrow mb-8">{name} · {l.length}</div><div className="list">{l.map((x) => <TaskRow key={x.id} t={x} showDate={name !== 'Today' || x.due !== t} projects={projects} goals={goals} plan={{ risk: risk.has(x.id), est: taskEstimate(x, settings) }} />)}</div></div>
+      )) : <Empty icon="☀️" title="All clear" sub="Add a task and the planner finds time for it." />}
       {doneToday.length > 0 && <><div className="eyebrow mt-24 mb-8">Done today · {doneToday.length}</div><div className="list">{doneToday.map((x) => <TaskRow key={x.id} t={x} projects={projects} goals={goals} />)}</div></>}
     </>;
-  } else if (v === 'upcoming') {
-    const l = sortT(open.filter((x) => x.due && x.due > t));
-    const groups = {};
-    l.forEach((x) => (groups[x.due] = groups[x.due] || []).push(x));
-    body = Object.keys(groups).length ? Object.entries(groups).map(([d, list]) => (
-      <div key={d} className="mb-16"><div className="eyebrow mb-8">{fmtDay(d)}</div><div className="list">{list.map((x) => <TaskRow key={x.id} t={x} showDate={false} projects={projects} goals={goals} />)}</div></div>
-    )) : <Empty icon="🗓️" title="Nothing upcoming" />;
-  } else if (v === 'someday') {
-    const l = open.filter((x) => !x.due);
-    body = l.length ? <div className="list">{l.map((x) => <TaskRow key={x.id} t={x} projects={projects} goals={goals} />)}</div> : <Empty icon="☁️" title="No someday tasks" sub="Ideas without a date live here." />;
   } else if (v === 'projects') {
     body = <>
       {projects.map((p) => {
@@ -97,11 +101,11 @@ function TasksView() {
 
   return (
     <div className="mt-16">
-      <Chips value={v} onChange={setV} options={[{ value: 'today', label: 'Today' }, { value: 'upcoming', label: 'Upcoming' }, { value: 'someday', label: 'Someday' }, { value: 'projects', label: 'Projects' }, { value: 'category', label: 'Category' }, { value: 'done', label: 'Done' }, { value: 'stats', label: 'Stats' }]} />
-      {['today', 'upcoming', 'someday'].includes(v) && (
+      <Chips value={v} onChange={setV} options={[{ value: 'plan', label: 'Plan' }, { value: 'projects', label: 'Projects' }, { value: 'category', label: 'Category' }, { value: 'done', label: 'Done' }, { value: 'stats', label: 'Stats' }]} />
+      {v === 'plan' && (
         <div className="row mt-16">
           <input className="input grow" placeholder="Add a task…" value={quick} onChange={(e) => setQuick(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addQuick()} />
-          <button className="icon-btn" style={{ width: 48, height: 48, background: 'var(--task)', color: '#fff' }} onClick={() => (quick.trim() ? addQuick() : push('TaskForm', { due: v === 'someday' ? null : t }))}><Plus size={22} /></button>
+          <button className="icon-btn" style={{ width: 48, height: 48, background: 'var(--task)', color: '#fff' }} onClick={() => (quick.trim() ? addQuick() : push('TaskForm', { due: t }))}><Plus size={22} /></button>
         </div>
       )}
       <div className="mt-16">{body}</div>
@@ -141,7 +145,7 @@ function TaskStats({ all, cats, projects }) {
    ========================================================= */
 const REMINDERS = [{ value: null, label: 'None' }, { value: 0, label: 'At time' }, { value: 30, label: '30 min before' }, { value: 60, label: '1 hr before' }, { value: 1440, label: '1 day before' }];
 export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
-  const { pop, toast } = useApp();
+  const { pop, toast, settings } = useApp();
   const [x, setX] = useState(null);
   const [sub, setSub] = useState('');
   const [del, setDel] = useState(false);
@@ -175,18 +179,22 @@ export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
         {x.due && x.dueTime && (
           <Field label="Duration (for your timeline)"><Chips value={x.duration || 30} onChange={(v) => set({ duration: v })} options={[15, 30, 45, 60, 90, 120].map((v) => ({ value: v, label: v < 60 ? `${v}m` : `${v / 60}h` }))} /></Field>
         )}
+        <Field label="Planner">
+          <div className="small dim mb-8">How hard is it? The planner turns this into sessions.</div>
+          <div className="pl-dots">{[1, 2, 3, 4, 5].map((n) => <button key={n} className={x.difficulty === n ? 'on' : ''} aria-label={`Difficulty ${n}`} onClick={() => set({ difficulty: x.difficulty === n ? undefined : n })}>{n}</button>)}</div>
+          <div className="mt-12"><Chips wrap value={x.pcat || null} onChange={(v) => set({ pcat: v })} options={CATEGORIES} /></div>
+          <div className="row gap-8 mt-12">
+            <input type="number" inputMode="decimal" min="0" step="0.5" className="input grow" placeholder="Hours needed (optional)" value={x.estHours ?? ''} onChange={(e) => set({ estHours: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)) })} />
+          </div>
+          {(x.difficulty != null || x.pcat) && <div className="tiny muted mt-8">{estimateLine(x, settings)}</div>}
+          {!x.due && <div className="row between mt-12"><div className="small">Add to my plan anyway</div><Toggle on={x.plan === true} onChange={(v) => set({ plan: v })} /></div>}
+        </Field>
         {x.due && <Field label="Reminder"><Chips value={x.reminder} onChange={(v) => set({ reminder: v })} options={REMINDERS} /></Field>}
         <Field label="Repeat"><Chips value={x.recurrence} onChange={(v) => set({ recurrence: v })} options={[{ value: 'none', label: 'Never' }, { value: 'daily', label: 'Daily' }, { value: 'weekdays', label: 'Weekdays' }, { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }]} /></Field>
         <Field label="Priority"><Chips value={x.priority} onChange={(v) => set({ priority: v })} options={[{ value: 'none', label: 'None' }, { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]} /></Field>
         <Field label="Subtasks">
           <div className="list">
-            {(x.subtasks || []).map((s) => (
-              <div key={s.id} className="list-item">
-                <button className={`task-check ${s.done ? 'on' : ''}`} onClick={() => set({ subtasks: x.subtasks.map((z) => (z.id === s.id ? { ...z, done: !z.done } : z)) })}>{s.done && <Check size={13} strokeWidth={3} />}</button>
-                <span className={`grow ${s.done ? 'strike' : ''}`}>{s.title}</span>
-                <button className="icon-btn sm ghost" onClick={() => set({ subtasks: x.subtasks.filter((z) => z.id !== s.id) })}><X size={14} /></button>
-              </div>
-            ))}
+            <SubList subs={x.subtasks || []} set={set} />
             <div className="list-item"><Plus size={16} className="muted" /><input className="grow" style={{ background: 'none', border: 0 }} placeholder="Add a step" value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && sub.trim()) { set({ subtasks: [...(x.subtasks || []), { id: uid(), title: sub.trim(), done: false }] }); setSub(''); } }} /></div>
           </div>
         </Field>
@@ -208,6 +216,33 @@ export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
       <Confirm open={del} onClose={() => setDel(false)} title="Delete task?" onConfirm={async () => { await db.tasks.delete(id); pop(); }} />
     </div>
   );
+}
+
+
+function estimateLine(x, settings) {
+  const e = taskEstimate({ ...x, subtasks: (x.subtasks || []).filter((s) => !s.done) }, settings, true);
+  return e ? `${estLabel(e.hours, e.guessed)}${x.subtasks?.length ? ` across ${x.subtasks.filter((s) => !s.done).length} steps` : ''}. Override with your own hours.` : '';
+}
+
+/* Subtasks: tap the grip and drag to reorder; tap "Lv" to set a step's difficulty */
+function SubList({ subs, set }) {
+  const [drag, setDrag] = useState(null);
+  const H = 52;
+  const move = (e) => { if (!drag) return; const dy = e.clientY - drag.y0; setDrag({ ...drag, dy, to: Math.max(0, Math.min(subs.length - 1, drag.i + Math.round(dy / H))) }); };
+  const up = () => {
+    if (drag && drag.to !== drag.i) { const a = [...subs]; const [m] = a.splice(drag.i, 1); a.splice(drag.to, 0, m); set({ subtasks: a }); }
+    setDrag(null);
+  };
+  const upd = (id, p) => set({ subtasks: subs.map((z) => (z.id === id ? { ...z, ...p } : z)) });
+  return subs.map((s, i) => (
+    <div key={s.id} className="list-item" style={drag?.i === i ? { transform: `translateY(${drag.dy}px)`, zIndex: 5, background: 'var(--surface-2)', position: 'relative' } : null}>
+      <button className="icon-btn sm ghost" style={{ touchAction: 'none' }} aria-label="Drag to reorder" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag({ i, y0: e.clientY, dy: 0, to: i }); }} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setDrag(null)}><GripVertical size={16} /></button>
+      <button className={`task-check ${s.done ? 'on' : ''}`} onClick={() => upd(s.id, { done: !s.done })}>{s.done && <Check size={13} strokeWidth={3} />}</button>
+      <span className={`grow ${s.done ? 'strike' : ''}`}>{s.title}</span>
+      <button className="tiny muted" style={{ minWidth: 40, height: 32 }} aria-label="Step difficulty" onClick={() => upd(s.id, { difficulty: ((s.difficulty || 0) % 5) + 1 })}>{s.difficulty ? `Lv ${s.difficulty}` : 'Lv –'}</button>
+      <button className="icon-btn sm ghost" onClick={() => set({ subtasks: subs.filter((z) => z.id !== s.id) })}><X size={14} /></button>
+    </div>
+  ));
 }
 
 export function Projects() {

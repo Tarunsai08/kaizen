@@ -11,13 +11,14 @@ import { MultiRing, MoodScale, Sheet, TagSelect, Scale5, MOODS } from '../ui/kit
 import { HabitRow, BreakRow, TaskRow, GoalCard, SectionHead } from '../ui/rows';
 import { success } from '../lib/native';
 import { momentumUntil, stageFor } from '../lib/xp';
-import { dayItems, nowNext } from '../lib/day';
 import { HIcon } from '../ui/icons';
 import Companion from '../ui/Companion';
 import { useXP, companionMood } from './You';
-import { useEnergy } from './Health';
 import { personStatus, Avatar } from './People';
 import { YesterdayPrompt } from './TodayLayouts';
+import PlanBlock from './planner/PlanToday';
+import { QuickSheet } from './today/shared';
+import { MoreButton } from './planner/More';
 import { LAYOUTS } from './today';
 
 export default function Today() {
@@ -52,11 +53,9 @@ function TodayClassic() {
       db.interactions.toArray(),
     ]);
     const day = await computeDay(t, settings);
-    const timeline = await dayItems(t, settings);
-    return { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day, intention, people, inter, timeline };
+    return { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day, intention, people, inter };
   }, [t, settings.schedule, settings.frozenDays?.length]);
   const xp = useXP();
-  const energy = useEnergy();
 
   // momentum: consecutive days with score >= 60
   const scores = settings.scores || {};
@@ -71,14 +70,14 @@ function TodayClassic() {
   }, [data?.day.score]);
 
   if (!data) return <div className="screen" />;
-  const { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day, intention, people, inter, timeline } = data;
+  const { habits, logs, urges, tasks, goals, checkins, moods, sleepToday, journal, txToday, untagged, workouts, projects, day, intention, people, inter } = data;
 
+  const mod = { people: settings.modules?.people !== false, study: settings.modules?.study !== false, money: settings.modules?.money !== false, boredom: settings.modules?.boredom !== false };
   const frozen = settings.frozenDays || [];
   const sc = { ...scores, [t]: day.score };
   const momentum = momentumUntil(sc, frozen, t) || momentumUntil(sc, frozen, addDays(t, -1));
   const restDay = frozen.includes(t);
   const duePeople = people.map((p) => ({ p, s: personStatus(p, inter) })).filter((x) => x.s.due);
-  const nn = nowNext(timeline.items);
 
   const build = habits.filter((h) => h.type === 'build' && habitDueOn(h, t));
   const breaks = habits.filter((h) => h.type === 'break');
@@ -114,10 +113,11 @@ function TodayClassic() {
           <div className="eyebrow">{DAYS_SHORT[d.getDay()]} · {d.getDate()} {MONTHS[d.getMonth()]}</div>
           <h1 className="h1 mt-4">{greeting()}{settings.name ? `, ${settings.name}` : ''}</h1>
         </div>
+        <div className="row gap-8"><MoreButton />
         <button onClick={() => push('You')} aria-label="You" style={{ position: 'relative', width: 52, height: 52, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
           <div style={{ marginTop: 6 }}><Companion stage={xp ? stageFor(xp.total.level).index : 0} mood={companionMood(day.score)} size={44} /></div>
           {xp && <span style={{ position: 'absolute', right: 3, top: 3, minWidth: 17, height: 17, borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 10, fontWeight: 800, display: 'grid', placeItems: 'center', padding: '0 4px' }}>{xp.total.level}</span>}
-        </button>
+        </button></div>
       </div>
 
       {/* Day score */}
@@ -155,43 +155,8 @@ function TodayClassic() {
         </div>
       )}
 
-      {/* Now / Next (timeline) + energy */}
-      <button className="card card-press mt-12" style={{ width: '100%', textAlign: 'left', padding: 0 }} onClick={() => goTab('plan')}>
-        {energy && (
-          <div className="row gap-10" style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
-            <Zap size={16} color="var(--accent)" />
-            <span className="small grow"><b>{energy.zone.label}</b>{energy.zone.untilLabel ? <span className="muted"> · until {energy.zone.untilLabel}</span> : null}</span>
-            <span className="tiny muted ellipsis" style={{ maxWidth: '45%' }}>{energy.zone.tip}</span>
-          </div>
-        )}
-        {[...(nn.cur ? [{ ...nn.cur, label: 'Now' }] : []), ...nn.next.map((x, i) => ({ ...x, label: i === 0 && !nn.cur ? 'Next' : 'Then' }))].map((it) => (
-          <div key={it.key} className="row gap-12" style={{ padding: '11px 16px' }}>
-            <div className="tile sm" style={{ background: `color-mix(in srgb, ${it.color} 18%, transparent)` }}><HIcon icon={it.icon} size={16} color={it.color} /></div>
-            <div className="grow" style={{ minWidth: 0 }}>
-              <div className="tiny muted">{it.label} · {fmtHM(it.start)}</div>
-              <div className="ellipsis" style={{ fontWeight: 600 }}>{it.title}</div>
-            </div>
-          </div>
-        ))}
-        {!nn.cur && !nn.next.length && <div className="small muted" style={{ padding: '12px 16px' }}>Nothing else planned today. Enjoy the space.</div>}
-      </button>
-
-      {/* Contextual prompts */}
       <YesterdayPrompt />
-      {showMorning && (
-        <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('Morning')}>
-          <div className="swatch" style={{ background: 'color-mix(in srgb, var(--goal) 18%, transparent)' }}><Sunrise size={20} color="var(--goal)" /></div>
-          <div className="grow"><div className="h3">Morning check-in</div><div className="small muted">Wake time, sleep quality & today’s plan</div></div>
-          <ChevronRight size={18} className="muted" />
-        </button>
-      )}
-      {showNight && (
-        <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('NightReview')}>
-          <div className="swatch" style={{ background: 'color-mix(in srgb, var(--sleep) 18%, transparent)' }}><Moon size={20} color="var(--sleep)" /></div>
-          <div className="grow"><div className="h3">Night review</div><div className="small muted">2 minutes to close the day{untagged ? ` · ${untagged} to tag` : ''}</div></div>
-          <ChevronRight size={18} className="muted" />
-        </button>
-      )}
+      <PlanBlock />
       {needsReview.length > 0 && (
         <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('GoalReview')}>
           <div className="swatch" style={{ background: 'color-mix(in srgb, var(--goal) 18%, transparent)' }}>🏁</div>
@@ -241,45 +206,43 @@ function TodayClassic() {
         </div>
       )}
 
-      {/* Tasks */}
-      <div className="section">
-        <SectionHead title="Tasks" link="Plan" onLink={() => goTab('plan')} />
-        <div className="list">
-          {todayTasks.map((x) => <TaskRow key={x.id} t={x} showDate={x.due !== t} projects={projects} goals={goals} />)}
-          {duePeople.map(({ p, s }) => (
-            <button key={'p' + p.id} className="list-item" onClick={() => push('PersonDetail', { id: p.id })}>
-              <Avatar p={p} size={26} />
-              <div className="grow"><div style={{ fontWeight: 540 }}>Reach out to {p.name}</div><div className="tiny muted">{s.since == null ? 'Say hi' : `${s.since} days since you talked`}</div></div>
-              <Phone size={15} className="muted" />
-            </button>
-          ))}
-          <button className="list-item muted" onClick={() => push('TaskForm', { due: t })}>
-            <Plus size={18} /> <span className="small" style={{ fontWeight: 550 }}>{todayTasks.length ? 'Add task' : 'Nothing due today — add a task'}</span>
-          </button>
+      {/* Keep in touch */}
+      {mod.people && duePeople.length > 0 && (
+        <div className="section">
+          <SectionHead title="Keep in touch" />
+          <div className="list">
+            {duePeople.map(({ p, s }) => (
+              <button key={'p' + p.id} className="list-item" onClick={() => push('PersonDetail', { id: p.id })}>
+                <Avatar p={p} size={26} />
+                <div className="grow"><div style={{ fontWeight: 540 }}>Reach out to {p.name}</div><div className="tiny muted">{s.since == null ? 'Say hi' : `${s.since} days since you talked`}</div></div>
+                <Phone size={15} className="muted" />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Study + experiments */}
-      <div className="section col gap-8">
+      {mod.study && <div className="section col gap-8">
         <StudyCard />
         <ExperimentsToday />
-      </div>
+      </div>}
 
       {/* Money + bored */}
       <div className="grid-2 section">
-        <button className="card card-press" style={{ textAlign: 'left' }} onClick={() => push('MoneyScreen')}>
+        {mod.money && <button className="card card-press" style={{ textAlign: 'left' }} onClick={() => push('MoneyScreen')}>
           <Wallet size={18} color="var(--money)" />
           <div className="h2 mt-8 num">{money(spent, settings.currency)}</div>
           <div className="small muted">spent today{untagged ? ` · ${untagged} untagged` : ''}</div>
-        </button>
-        <button className="card card-press" style={{ textAlign: 'left', background: 'color-mix(in srgb, var(--bored) 14%, var(--surface))' }} onClick={() => push('Boredom')}>
+        </button>}
+        {mod.boredom && <button className="card card-press" style={{ textAlign: 'left', background: 'color-mix(in srgb, var(--bored) 14%, var(--surface))' }} onClick={() => push('Boredom')}>
           <Wind size={18} color="var(--bored)" />
           <div className="h2 mt-8">I’m bored</div>
           <div className="small muted">Pick something on purpose</div>
-        </button>
+        </button>}
       </div>
 
-      <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('Insights')}>
+      <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlannerInsights')}>
         <div className="swatch" style={{ background: 'color-mix(in srgb, var(--accent) 16%, transparent)' }}><Sparkles size={18} color="var(--accent)" /></div>
         <div className="grow"><div className="h3">Insights</div><div className="small muted">Patterns across sleep, mood, money & habits</div></div>
         <ChevronRight size={18} className="muted" />
@@ -287,29 +250,7 @@ function TodayClassic() {
 
       <button className="fab" onClick={() => setFab(true)} aria-label="Quick add"><Plus size={28} strokeWidth={2.5} /></button>
 
-      <Sheet open={fab} onClose={() => setFab(false)} title="Quick add">
-        <div className="grid-3">
-          {[
-            { l: 'Check in', i: Smile, c: 'var(--mood)', a: () => push('MoodCheckin') },
-            { l: 'Task', i: CheckSquare, c: 'var(--task)', a: () => push('TaskForm', { due: t }) },
-            { l: 'Expense', i: Wallet, c: 'var(--money)', a: () => push('TxForm', {}) },
-            { l: 'Focus', i: Timer, c: 'var(--bored)', a: () => push('Focus', {}) },
-            { l: 'Breathe', i: Wind, c: 'var(--bored)', a: () => push('Breathe', {}) },
-            { l: 'Urge', i: Flame, c: 'var(--break)', a: () => goTab('habits') },
-            { l: 'Workout', i: Dumbbell, c: 'var(--fit)', a: () => push('Workout', { date: t }) },
-            { l: 'Sleep', i: Moon, c: 'var(--sleep)', a: () => push('SleepLog', {}) },
-            { l: 'Journal', i: Sparkles, c: 'var(--goal)', a: () => push('NightReview') },
-            { l: 'Learned', i: Lightbulb, c: 'var(--goal)', a: () => push('LearningForm') },
-            { l: 'Revise', i: Brain, c: 'var(--task)', a: () => push('ReviewDeck') },
-            { l: 'Study', i: GraduationCap, c: 'var(--task)', a: () => goTab('study') },
-          ].map((x) => (
-            <button key={x.l} className="card flat card-press col" style={{ alignItems: 'center', gap: 8, padding: '18px 8px' }} onClick={() => { setFab(false); x.a(); }}>
-              <x.i size={22} color={x.c} />
-              <span className="small" style={{ fontWeight: 600 }}>{x.l}</span>
-            </button>
-          ))}
-        </div>
-      </Sheet>
+      <QuickSheet open={fab} onClose={() => setFab(false)} t={t} />
 
       <MoodDetailSheet state={moodSheet} onClose={() => { setMoodSheet(null); toast('Mood logged'); }} emotions={settings.emotions} />
     </div>

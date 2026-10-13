@@ -7,7 +7,8 @@ import './shared.css';
 
 /** The 12 quick-add actions, shared by every layout (each layout styles them its own way). */
 export function useQuickAdd(t) {
-  const { push, goTab } = useApp();
+  const { push, goTab, settings } = useApp();
+  const m = settings.modules || {};
   return [
     { k: 'mood', l: 'Check in', i: Smile, c: 'var(--mood)', a: () => push('MoodCheckin') },
     { k: 'task', l: 'Task', i: CheckSquare, c: 'var(--task)', a: () => push('TaskForm', { due: t }) },
@@ -21,7 +22,7 @@ export function useQuickAdd(t) {
     { k: 'learned', l: 'Learned', i: Lightbulb, c: 'var(--goal)', a: () => push('LearningForm') },
     { k: 'revise', l: 'Revise', i: Brain, c: 'var(--task)', a: () => push('ReviewDeck') },
     { k: 'study', l: 'Study', i: GraduationCap, c: 'var(--task)', a: () => goTab('study') },
-  ];
+  ].filter((x) => !((x.k === 'tx' && m.money === false) || (x.k === 'journal' && m.journal === false) || (x.k === 'breathe' && m.mind === false) || (['learned', 'revise', 'study'].includes(x.k) && m.study === false)));
 }
 
 /** Quick-add sheet; `skin` lets a layout restyle the tiles (and `label` renames the title). */

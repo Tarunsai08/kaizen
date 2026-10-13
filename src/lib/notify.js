@@ -4,6 +4,7 @@ import { db, getKV } from '../db';
 import { isNative } from './native';
 import { hmToMin, today, dow, addDays } from './date';
 import { checkinDays, DEFAULT_CHECKIN, habitActiveOn } from './logic';
+import { blockSegments } from '../scheduler';
 
 let scheduling = null;
 let timer = null;
@@ -30,6 +31,8 @@ export async function registerActions(handlers) {
       { id: 'GOAL', actions: [{ id: 'yes', title: 'Yes, made progress' }, { id: 'no', title: 'Not today' }, { id: 'snooze', title: 'Snooze' }] },
       { id: 'TASK', actions: [{ id: 'done', title: 'Mark done' }, { id: 'snooze', title: 'Snooze 15m' }] },
       { id: 'HABIT', actions: [{ id: 'log', title: 'Log it' }, { id: 'snooze', title: 'Snooze' }] },
+      { id: 'SESSION', actions: [{ id: 'start', title: 'Start' }, { id: 'snooze', title: 'Snooze 10 min' }, { id: 'skip', title: 'Skip' }] },
+      { id: 'SESSION_END', actions: [{ id: 'done', title: 'Done' }, { id: 'more', title: 'Need 15 more min' }, { id: 'partial', title: 'Partially done' }] },
       { id: 'GENERIC', actions: [{ id: 'snooze', title: 'Snooze 15m' }] },
     ],
   });
@@ -37,7 +40,7 @@ export async function registerActions(handlers) {
   LocalNotifications.addListener('localNotificationActionPerformed', async (ev) => {
     const n = ev.notification;
     const extra = n.extra || {};
-    if (ev.actionId === 'snooze') {
+    if (ev.actionId === 'snooze' && extra.kind !== 'session') {
       await LocalNotifications.schedule({ notifications: [{ ...n, id: Math.floor(Math.random() * 1e9), schedule: { at: new Date(Date.now() + 15 * 60000), allowWhileIdle: true } }] });
       return;
     }
@@ -82,8 +85,23 @@ async function buildAll() {
     if (at > Date.now()) push({ title: t.title, body: t.reminder ? `Due ${t.dueTime ? 'at ' + t.dueTime : 'today'}` : 'Reminder', actionTypeId: 'TASK', extra: { kind: 'task', taskId: t.id }, schedule: { at: new Date(at), allowWhileIdle: true } });
   }
 
-  // Night review, ~30 min before bedtime
-  if (settings.bedtimeTarget) {
+  // Planner: session start / end (quiet during sleep and class) and the evening wrap-up
+  const pl = { alertSession: true, alertWrap: true, wrapTime: '21:30', ...(settings.planner || {}) };
+  if (pl.alertSession) {
+    const t0 = today();
+    const at = (date, min) => { const [y, m, d] = date.split('-').map(Number); return new Date(y, m - 1, d, 0, min).getTime(); };
+    const fixed = await db.fixedBlocks.toArray();
+    const quiet = (date, min) => blockSegments(fixed, date).some(({ b, seg }) => (b.type === 'SLEEP' || b.type === 'CLASS') && min >= seg[0] && min < seg[1]);
+    const sess = (await db.plannedSessions.where('date').between(t0, addDays(t0, 2), true, true).filter((s) => s.state === 'PLANNED' && s.kind !== 'BREAK').toArray()).sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start).slice(0, 14);
+    for (const s of sess) {
+      if (at(s.date, s.start) > Date.now() + 30000 && !quiet(s.date, s.start)) push({ title: s.title, body: s.reason, actionTypeId: 'SESSION', extra: { kind: 'session', id: s.id }, schedule: { at: new Date(at(s.date, s.start)), allowWhileIdle: true } });
+      if (at(s.date, s.end) > Date.now() + 30000 && !quiet(s.date, s.end)) push({ title: `Time check · ${s.title}`, body: 'How did it go?', actionTypeId: 'SESSION_END', extra: { kind: 'session', id: s.id, end: true }, schedule: { at: new Date(at(s.date, s.end)), allowWhileIdle: true } });
+    }
+  }
+  if (pl.alertWrap) push({ title: 'Wrap up your day', body: 'Tick what you did, then a quick check-in.', extra: { kind: 'route', route: 'wrap' }, schedule: { on: HM(pl.wrapTime), allowWhileIdle: true } });
+
+  // Night review, ~30 min before bedtime (replaced by the wrap-up above when that is on)
+  if (settings.bedtimeTarget && !pl.alertWrap) {
     const m = (hmToMin(settings.bedtimeTarget) - (settings.nightReviewLead ?? 30) + 1440) % 1440;
     push({ title: '🌙 Night review', body: 'Two minutes to close the day. Then phone away.', extra: { kind: 'route', route: 'night' }, schedule: { on: HM(minToHM(m)), allowWhileIdle: true } });
   }

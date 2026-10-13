@@ -38,6 +38,13 @@ import { LearningForm, LearningDetail, ExperimentDetail, Nugget, NuggetPrompt } 
 import { ensureSubjects } from './lib/study';
 import { setSoundEnabled } from './lib/sound';
 import Companion from './ui/Companion';
+import { PlanWeek } from './screens/planner/Week';
+import { FixedSchedule } from './screens/planner/Schedule';
+import { PlannerSetup } from './screens/planner/Setup';
+import { InsightsTab } from './screens/planner/PlannerInsights';
+import { MoreMenu, WrapUp } from './screens/planner/More';
+import { usePlannerEngine } from './planner/engine';
+import { startSession, finishSession, extendSession, snoozeSession } from './planner/service';
 
 const SCREENS = {
   HabitForm, HabitDetail, Urge,
@@ -51,6 +58,7 @@ const SCREENS = {
   CompanionScreen, YearPixels, Wrapped, AppLimit, ShieldSettings, Pause, ShieldDiagnostics,
   MoneyScreen, Roadmap, Lesson, StudyImport, SubjectSettings, ReviewDeck, StudyStats,
   LearningForm, LearningDetail, ExperimentDetail, Nugget, ShareChooser,
+  PlanWeek, FixedSchedule, PlannerSetup, MoreMenu, WrapUp, PlannerInsights: InsightsTab,
 };
 const TABS = [
   { key: 'today', label: 'Today', icon: Sun, C: Today },
@@ -138,6 +146,8 @@ export default function App() {
     return () => { h.then((x) => x.remove()); };
   }, []);
 
+  usePlannerEngine(ready && !!kv && !!settings.onboarded, settings);
+
   // Notifications: permission, action handlers, reschedule when data changes
   useEffect(() => {
     if (!ready) return;
@@ -153,8 +163,17 @@ export default function App() {
         const h = await db.habits.get(extra.habitId);
         if (h && action === 'log' && h.type === 'build') await db.habitLogs.add({ habitId: h.id, date: today(), ts: Date.now(), amount: 1 });
         else if (h) push('HabitDetail', { id: h.id });
+      } else if (extra.kind === 'session') {
+        if (action === 'start') await startSession(extra.id);
+        else if (action === 'done') await finishSession(extra.id, 'DONE');
+        else if (action === 'partial') await finishSession(extra.id, 'PARTIAL');
+        else if (action === 'skip') await finishSession(extra.id, 'SKIPPED');
+        else if (action === 'snooze') await snoozeSession(extra.id, 10);
+        else if (action === 'more') await extendSession(extra.id, 15);
+        else setTab('today');
       } else if (extra.kind === 'route') {
-        if (extra.route === 'night') push('NightReview');
+        if (extra.route === 'wrap') push('WrapUp');
+        else if (extra.route === 'night') push('NightReview');
         else if (extra.route === 'morning') push('Morning');
         else if (extra.route === 'goals') { setTab('plan'); }
         else if (extra.route === 'person') push('PersonDetail', { id: extra.id });

@@ -13,12 +13,12 @@ import { Bars } from '../ui/charts';
 import { MoveView, SleepView } from './Fitness';
 import { MindView } from './Mind';
 
-export function Health() {
+export function Health({ embedded }) {
   const [view, setView] = useSub('health', 'move');
   const { settings } = useApp();
   useEffect(() => { if (settings.healthConnect) hcSync(3); }, []);
   return (
-    <div className="screen fade-in">
+    <div className={embedded ? 'fade-in' : 'screen fade-in'}>
       <div className="titlebar"><h1 className="h1">Health</h1></div>
       <SubTabs value={view} onChange={setView} options={[['move', 'Move'], ['sleep', 'Sleep'], ['mind', 'Mind']]} />
       {view === 'move' && <><StepsCard /><div className="mt-12"><MoveView /></div></>}

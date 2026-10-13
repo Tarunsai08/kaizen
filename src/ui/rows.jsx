@@ -104,7 +104,7 @@ export function BreakRow({ h, urges }) {
 }
 
 /* ---------- Task row ---------- */
-export function TaskRow({ t, showDate = true, projects = [], goals = [] }) {
+export function TaskRow({ t, showDate = true, projects = [], goals = [], plan }) {
   const { push, toast } = useApp();
   const [anim, setAnim] = useState(false);
   const overdue = !t.done && t.due && t.due < today();
@@ -123,15 +123,18 @@ export function TaskRow({ t, showDate = true, projects = [], goals = [] }) {
       </button>
       <div className="grow">
         <div className={`ellipsis ${t.done || anim ? 'strike' : ''}`} style={{ fontWeight: 540 }}>{t.title}</div>
-        {(showDate && t.due) || proj || goal || subs.length || (t.recurrence && t.recurrence !== 'none') ? (
+        {(showDate && t.due) || proj || goal || subs.length || plan?.est || plan?.risk || (t.recurrence && t.recurrence !== 'none') ? (
           <div className="row gap-6 tiny muted mt-4 wrap">
             {showDate && t.due && <span style={overdue ? { color: 'var(--bad)' } : null} className="row gap-4"><CalendarDays size={11} />{fmtDay(t.due)}{t.dueTime ? ` ${fmtHM(t.dueTime)}` : ''}</span>}
             {t.recurrence && t.recurrence !== 'none' && <span className="row gap-4"><Repeat size={11} />{t.recurrence}</span>}
             {subs.length > 0 && <span>{subs.filter((s) => s.done).length}/{subs.length}</span>}
+            {plan?.est && <span>{plan.est.text} left</span>}
+            {plan?.risk && <span style={{ color: 'var(--goal)', fontWeight: 650 }}>At risk</span>}
             {proj && <span>▸ {proj.name}</span>}
             {goal && <span className="row gap-4"><Flag size={11} />{goal.title}</span>}
           </div>
         ) : null}
+        {subs.length > 0 && <div style={{ height: 3, borderRadius: 2, background: 'var(--surface-2)', marginTop: 6, overflow: 'hidden' }}><div style={{ height: '100%', width: `${(subs.filter((s) => s.done).length / subs.length) * 100}%`, background: 'var(--accent)' }} /></div>}
       </div>
       {t.priority && t.priority !== 'none' && <Flag size={14} className={`prio-${t.priority}`} fill="currentColor" />}
     </div>

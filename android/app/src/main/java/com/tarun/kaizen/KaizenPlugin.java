@@ -1,22 +1,29 @@
 package com.tarun.kaizen;
 
+import android.Manifest;
 import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.ContentObserver;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Process;
+import android.provider.CalendarContract;
 import android.provider.Settings;
 import android.util.Base64;
 
@@ -24,8 +31,11 @@ import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 import org.json.JSONArray;
 
@@ -43,7 +53,7 @@ import java.util.Set;
  *  - Shield (Accessibility) config + events
  *  - home-screen widget data
  */
-@CapacitorPlugin(name = "Kaizen")
+@CapacitorPlugin(name = "Kaizen", permissions = { @Permission(alias = "calendar", strings = { Manifest.permission.READ_CALENDAR }) })
 public class KaizenPlugin extends Plugin {
 
     static volatile String sharedText = null;
@@ -370,6 +380,100 @@ public class KaizenPlugin extends Plugin {
         home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         getContext().startActivity(home);
         call.resolve();
+    }
+
+    /* ---------------- calendar (read-only, on-device; no network, no OAuth) ---------------- */
+
+    private ContentObserver calendarObserver;
+
+    @Override
+    public void load() {
+        try {
+            calendarObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    notifyListeners("calendarChanged", new JSObject());
+                }
+            };
+            getContext().getContentResolver().registerContentObserver(CalendarContract.Events.CONTENT_URI, true, calendarObserver);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean calendarGranted() {
+        return getPermissionState("calendar") == PermissionState.GRANTED;
+    }
+
+    @PluginMethod
+    public void calendarStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("granted", calendarGranted());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestCalendar(PluginCall call) {
+        if (calendarGranted()) {
+            calendarStatus(call);
+        } else {
+            requestPermissionForAlias("calendar", call, "calendarPermResult");
+        }
+    }
+
+    @PermissionCallback
+    private void calendarPermResult(PluginCall call) {
+        calendarStatus(call);
+    }
+
+    @PluginMethod
+    public void getCalendars(PluginCall call) {
+        JSArray out = new JSArray();
+        if (calendarGranted()) {
+            String[] proj = { CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, CalendarContract.Calendars.ACCOUNT_NAME, CalendarContract.Calendars.CALENDAR_COLOR };
+            try (Cursor c = getContext().getContentResolver().query(CalendarContract.Calendars.CONTENT_URI, proj, null, null, null)) {
+                while (c != null && c.moveToNext()) {
+                    JSObject o = new JSObject();
+                    o.put("id", String.valueOf(c.getLong(0)));
+                    o.put("name", c.getString(1));
+                    o.put("account", c.getString(2));
+                    o.put("color", c.getInt(3));
+                    out.put(o);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("calendars", out);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getCalendarEvents(PluginCall call) {
+        JSArray out = new JSArray();
+        if (calendarGranted()) {
+            long from = call.getData().optLong("from", System.currentTimeMillis());
+            long to = call.getData().optLong("to", from + 7L * 86400000L);
+            Uri.Builder b = CalendarContract.Instances.CONTENT_URI.buildUpon();
+            ContentUris.appendId(b, from);
+            ContentUris.appendId(b, to);
+            String[] proj = { CalendarContract.Instances.EVENT_ID, CalendarContract.Instances.CALENDAR_ID, CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.ALL_DAY };
+            try (Cursor c = getContext().getContentResolver().query(b.build(), proj, null, null, CalendarContract.Instances.BEGIN + " ASC")) {
+                while (c != null && c.moveToNext()) {
+                    JSObject o = new JSObject();
+                    o.put("id", c.getLong(0) + ":" + c.getLong(3));
+                    o.put("calendarId", String.valueOf(c.getLong(1)));
+                    o.put("title", c.getString(2));
+                    o.put("start", c.getLong(3));
+                    o.put("end", c.getLong(4));
+                    o.put("allDay", c.getInt(5) == 1);
+                    out.put(o);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("events", out);
+        call.resolve(ret);
     }
 
     /* ---------------- widgets ---------------- */

@@ -18,10 +18,10 @@ import { AREAS } from '../lib/xp';
 /* =========================================================
    HABITS TAB
    ========================================================= */
-export function Habits() {
+export function Habits({ embedded }) {
   const [view, setView] = useSub('habits', 'habits');
   return (
-    <div className="screen fade-in">
+    <div className={embedded ? 'fade-in' : 'screen fade-in'}>
       <HabitsHeader />
       <SubTabs value={view} onChange={setView} options={[['habits', 'Habits'], ['screen', 'Screen time']]} />
       {view === 'habits' ? <HabitsList /> : <ScreenTimeView />}
