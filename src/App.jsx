@@ -18,7 +18,7 @@ import { applyPlColor } from './lib/plcolor';
 import { isStudio } from './studio/mode';
 import { Spaces, SpaceScreen } from './studio/Spaces';
 import { FocusHub, FocusRun, ZenMode, Forest } from './studio/Focus';
-import { StudyHome, SubjectJourney, ChapterJourney, LessonDone } from './studio/journey/Journey';
+import { StudyHome, SubjectJourney, ChapterJourney, ConceptPath, LessonDone } from './studio/journey/Journey';
 import { TaskList } from './studio/Tasks';
 import { today, nowHM, setDayStart, setEarlyStart } from './lib/date';
 
@@ -65,7 +65,7 @@ const SCREENS = {
   MoneyScreen, Roadmap, Lesson, StudyImport, SubjectSettings, ReviewDeck, StudyStats,
   LearningForm, LearningDetail, ExperimentDetail, Nugget, ShareChooser,
   PlanWeek, FixedSchedule, PlannerSetup, MoreMenu, WrapUp, PlannerInsights: InsightsTab,
-  Space: SpaceScreen, FocusRun, ZenMode, Forest, SubjectJourney, ChapterJourney, LessonDone, TaskList,
+  Space: SpaceScreen, FocusRun, ZenMode, Forest, SubjectJourney, ChapterJourney, ConceptPath, LessonDone, TaskList,
 };
 const TABS = [
   { key: 'today', label: 'Today', icon: Sun, C: Today },

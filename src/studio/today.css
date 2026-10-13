@@ -102,3 +102,42 @@
 .qe-more button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px; border-radius: 16px; font-size: 11.5px; font-weight: 650; color: var(--text-2); }
 .qe-more button:active { background: var(--surface-2); }
 .qe-more button span { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; color: var(--qc); background: color-mix(in srgb, var(--qc) 14%, var(--surface)); }
+
+/* day score card */
+.st-score { display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 16px; border-radius: 22px; background: var(--surface); box-shadow: var(--z-lift); cursor: pointer; position: relative; overflow: hidden; }
+.st-score::after { content: ''; position: absolute; right: -50px; top: -60px; width: 170px; height: 170px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); pointer-events: none; }
+.st-score .ring { position: relative; width: 96px; height: 96px; flex-shrink: 0; display: grid; place-content: center; text-align: center; }
+.st-score .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.st-score .ring circle { fill: none; stroke-width: 9; stroke-linecap: round; }
+.st-score .ring .bg { stroke: var(--surface-3); }
+.st-score .ring .fg { stroke: var(--accent); transition: stroke-dasharray 0.9s var(--ease); }
+.st-score .ring b { position: relative; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.st-score .ring small { position: relative; font-size: 10.5px; font-weight: 700; color: var(--muted); }
+.st-score-h { font-size: 16px; font-weight: 760; letter-spacing: -0.015em; }
+.st-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.st-chips span { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text-2); background: var(--surface-2); }
+.st-chips span svg { color: var(--goal); }
+.st-chips .xp { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }
+.st-chips .xp svg { color: var(--accent); }
+.st-mini { display: flex; gap: 10px; margin-top: 10px; }
+.st-mini > div { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.st-mini .mr { position: relative; width: 34px; height: 34px; display: grid; place-items: center; color: var(--c); }
+.st-mini .mr svg.r { position: absolute; inset: 0; transform: rotate(-90deg); }
+.st-mini .mr svg.r circle { fill: none; stroke-width: 3.6; stroke-linecap: round; }
+.st-mini .mr .bg { stroke: color-mix(in srgb, var(--c) 18%, var(--surface-2)); }
+.st-mini .mr .fg { stroke: var(--c); transition: stroke-dasharray 0.8s var(--ease); }
+.st-mini small { font-size: 10.5px; font-weight: 700; color: var(--muted); }
+
+/* one thing now */
+.st-now { margin-top: 14px; padding: 16px; border-radius: 22px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); }
+.st-now .k { font-size: 12.5px; font-weight: 750; color: var(--accent); }
+.st-now.live .k::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: 1px; animation: zLive 1.8s ease-in-out infinite; }
+@keyframes zLive { 50% { opacity: 0.4; } }
+.st-now > b { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 19px; font-weight: 780; letter-spacing: -0.02em; line-height: 1.25; }
+.st-now > small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.st-now .acts { display: flex; gap: 8px; margin-top: 12px; }
+.st-now .go { flex: 1; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 750; color: var(--accent-ink); background: var(--accent); box-shadow: 0 10px 20px -12px var(--accent); }
+.st-now .ok { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: var(--text); background: var(--surface); box-shadow: var(--z-card); }
+.st-now .after { margin-top: 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.st-time { flex-shrink: 0; margin-top: 2px; height: 22px; padding: 0 8px; border-radius: 7px; font-size: 12px; font-weight: 750; line-height: 22px; color: var(--text-2); background: var(--surface-2); font-variant-numeric: tabular-nums; }
+.st-time.now { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
