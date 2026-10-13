@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Sunrise, Moon, ChevronRight, X, Play, Check, SkipForward, Shuffle, Plus, Sparkles, Calendar, Pin, CloudRain } from 'lucide-react';
+import { ChevronRight, X, Play, Check, Sparkles, Calendar, Pin, CloudRain, CalendarClock, CalendarRange } from 'lucide-react';
 import { db, getKV, setKV } from '../../db';
 import { useApp } from '../../ctx';
-import { today, hmToMin, beforeDayStart } from '../../lib/date';
+import { today, hmToMin } from '../../lib/date';
 import { success, tap } from '../../lib/native';
 import { Sheet, Toggle } from '../../ui/kit';
 import { blockSegments } from '../../scheduler';
-import { dayData, plannerSettings, startSession, finishSession, extendSession, swapSession, editSession, setLowEnergy, typeColor, hm12, dur, eventToTask } from '../../planner/service';
+import { dayData, plannerSettings, startSession, finishSession, skipSession, startNow, doInstead, editSession, setLowEnergy, typeColor, hm12, dur, eventToTask } from '../../planner/service';
 import './planner.css';
 
 const KIND_COLOR = { WORK: 'var(--accent)', EASY_WIN: 'var(--good)', PLAN_SUBTASKS: 'var(--goal)', BUFFER: 'var(--faint)', BREAK: 'var(--faint)' };
@@ -33,94 +33,85 @@ export function buildTimeline(data, date, ps) {
     items.push({ key: 't' + x.id, kind: 'task', start: s, end: s + (x.duration || 30), title: x.title, sub: 'Task at a set time', color: 'var(--task)', task: x });
   });
   (data.sessions || []).forEach((s) => {
-    if (s.state === 'SKIPPED' && (s.auto || s.swapped)) return;
+    if (s.state === 'SKIPPED') return;
     const task = (data.tasks || []).find((x) => x.id === s.taskId);
     items.push({ key: 's' + s.id, kind: s.kind === 'BREAK' ? 'break' : 'session', start: s.start, end: s.end, title: s.title, sub: s.reason, color: KIND_COLOR[s.kind] || 'var(--accent)', session: s, task });
   });
   return { items: items.sort((a, b) => a.start - b.start || a.end - b.end), banners };
 }
 
-export function CheckinCard() {
-  const { push } = useApp();
-  const t = today();
-  const d = useLiveQuery(async () => ({ sleep: await db.sleep.where('date').equals(t).first(), journal: await db.journal.where('date').equals(t).first() }), [t]);
-  const { settings } = useApp();
-  if (!d) return null;
+export function NowCard({ items, onOpen, onPick }) {
+  const { toast } = useApp();
   const n = new Date();
   const mins = n.getHours() * 60 + n.getMinutes();
-  const bed = hmToMin(settings.bedtimeTarget || '23:00');
-  const morning = !d.sleep?.wakeTs && mins >= 240 && mins < 780;
-  const night = !d.journal && (mins >= Math.max(1080, bed - 180) || beforeDayStart());
-  const card = (k, Icon, color, title, sub, to) => (
-    <button key={k} className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push(to)}>
-      <div className="swatch" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)` }}><Icon size={20} color={color} /></div>
-      <div className="grow"><div className="h3">{title}</div><div className="small muted">{sub}</div></div>
-      <ChevronRight size={18} className="muted" />
-    </button>
-  );
-  return <>
-    {morning && card('m', Sunrise, 'var(--goal)', 'Morning check-in', 'Wake time, sleep and mood shape today’s plan', 'Morning')}
-    {night && card('n', Moon, 'var(--sleep)', 'Evening check-in', 'Close the day so tomorrow’s plan fits you', 'NightReview')}
-  </>;
-}
-
-export function NowCard({ items, ctx, onOpen }) {
-  const { push, toast } = useApp();
-  const n = new Date();
-  const mins = n.getHours() * 60 + n.getMinutes();
-  const act = (it) => it.kind === 'session' && it.session.state === 'PLANNED' && it.session.kind !== 'BREAK';
+  const act = (it) => it.kind === 'session' && it.session.state === 'PLANNED';
   const cur = items.find((it) => act(it) && (it.session.startedAt || (it.start <= mins && it.end > mins)));
   const next = !cur && items.find((it) => act(it) && it.start > mins);
   const busy = !cur && items.find((it) => (it.kind === 'fixed' || it.kind === 'event') && it.start <= mins && it.end > mins);
   const it = cur || next;
   const s = it?.session;
-  const go = async (fn, msg) => { await fn(); if (msg) { success(); toast(msg); } else tap(); };
   if (!it) {
     return (
       <div className="pl-now" style={{ '--pc': busy?.color }}>
         <div className="bar" />
         <div className="eyebrow">{busy ? 'Now' : 'Free'}</div>
         <div className="h2 mt-4">{busy ? busy.title : 'Nothing planned right now'}</div>
-        <div className="why">{busy ? `Until ${hm12(busy.end)}. I’ll plan around it.` : 'Enjoy the space, or add something you want to get done.'}</div>
-        {!busy && <div className="pl-acts"><button className="btn" onClick={() => push('TaskForm', { due: today() })}><Plus size={16} /> Add task</button></div>}
+        <div className="why">{busy ? `Until ${hm12(busy.end)}.` : 'Pick something if you feel like it.'}</div>
+        {!busy && <div className="pl-acts"><button className="btn primary" onClick={() => onPick(null)}>Pick a task</button></div>}
       </div>
     );
   }
   const started = !!s.startedAt;
-  const left = Math.max(0, it.end - mins);
   return (
     <div className="pl-now" style={{ '--pc': it.color }}>
       <div className="bar" />
       <div className="row between">
-        <div className="eyebrow">{cur ? (started ? 'In progress' : 'Now') : 'Next'} · {hm12(it.start)}–{hm12(it.end)}</div>
-        <span className="tiny muted">{cur ? `${dur(left)} left` : `in ${dur(Math.max(0, it.start - mins))}`}</span>
+        <div className="eyebrow">{started ? 'In progress' : cur ? 'Now' : 'Next'} · {hm12(it.start)}</div>
+        <span className="tiny muted">{cur ? `${dur(Math.max(0, it.end - mins))} left` : `in ${dur(Math.max(0, it.start - mins))}`}</span>
       </div>
       <button className="h2 mt-4" style={{ textAlign: 'left', width: '100%' }} onClick={() => onOpen(it)}>{it.title}</button>
       {s.title !== s.taskTitle && <div className="small muted">{s.taskTitle}</div>}
       <div className="why">{s.reason}</div>
-      {!started ? (
-        <div className="pl-acts">
-          <button className="btn primary" onClick={() => go(() => startSession(s.id))}><Play size={16} /> Start</button>
-          <button className="btn" onClick={() => go(() => finishSession(s.id, 'DONE'), 'Done. Nice work')}><Check size={16} /> Done</button>
-          <button className="btn ic" onClick={() => go(() => finishSession(s.id, 'SKIPPED'))} aria-label="Skip"><SkipForward size={16} /></button>
-          <button className="btn ic" onClick={() => go(() => swapSession(s.id))} aria-label="Swap"><Shuffle size={16} /></button>
-        </div>
-      ) : (
-        <div className="pl-acts">
-          <button className="btn primary" onClick={() => go(() => finishSession(s.id, 'DONE'), 'Done. Nice work')}><Check size={16} /> Done</button>
-          <button className="btn" onClick={() => go(() => extendSession(s.id, 15))}>+15 min</button>
-          <button className="btn" onClick={() => go(() => finishSession(s.id, 'PARTIAL'), 'Partly done is progress')}>Partly</button>
-        </div>
-      )}
+      <div className="pl-acts">
+        {started
+          ? <button className="btn primary" onClick={async () => { await finishSession(s.id, 'DONE'); success(); toast('Done. Nice work'); }}><Check size={16} /> Done</button>
+          : <button className="btn primary" onClick={async () => { await startSession(s.id); tap(); }}><Play size={16} /> Start</button>}
+        <button className="btn quiet" onClick={() => onOpen(it)}>Not now</button>
+      </div>
     </div>
+  );
+}
+
+/** Any open task can be started right now, whatever the plan says. */
+export function TaskPicker({ open, onClose, currentId }) {
+  const { settings, toast } = useApp();
+  const tasks = useLiveQuery(() => db.tasks.filter((x) => !x.done && !x.skipped && !x.dueTime).toArray(), []) || [];
+  const list = tasks.sort((a, b) => (a.due || '9').localeCompare(b.due || '9')).slice(0, 40);
+  return (
+    <Sheet open={open} onClose={onClose} title="Do something else">
+      <div className="small dim mb-8">It starts now. The rest of your day rearranges around it.</div>
+      <div className="list">
+        {list.map((x) => (
+          <button key={x.id} className="list-item" onClick={async () => { await doInstead(currentId, x.id, settings); onClose(true); success(); toast('Started'); }}>
+            <div className="grow"><div style={{ fontWeight: 560 }}>{x.title}</div><div className="tiny muted">{x.due ? `Due ${x.due}` : 'No date'}</div></div>
+          </button>
+        ))}
+        {!list.length && <div className="list-item muted small">No open tasks.</div>}
+      </div>
+    </Sheet>
   );
 }
 
 export function SessionSheet({ item, onClose }) {
   const { push, toast } = useApp();
+  const [adjust, setAdjust] = useState(false);
+  const [pick, setPick] = useState(false);
+  useEffect(() => { setAdjust(false); setPick(false); }, [item]);
   if (!item) return <Sheet open={false} onClose={onClose} />;
   const s = item.session;
+  if (pick) return <TaskPicker open onClose={(done) => { setPick(false); if (done) onClose(); }} currentId={s?.id} />;
   const len = s ? s.end - s.start : 0;
+  const planned = s?.state === 'PLANNED';
   const shift = async (d) => { await editSession(s.id, { start: s.start + d, end: s.end + d }); onClose(); toast('Moved'); };
   const size = async (l) => { await editSession(s.id, { end: s.start + l }); onClose(); };
   return (
@@ -128,25 +119,28 @@ export function SessionSheet({ item, onClose }) {
       {s ? <>
         <div className="small muted">{hm12(s.start)}–{hm12(s.end)} · {dur(len)}{s.pinned ? ' · pinned' : ''}</div>
         <div className="small mt-8">{s.reason}</div>
-        {s.state === 'PLANNED' && <>
-          <div className="eyebrow mt-16 mb-8">Move</div>
-          <div className="row gap-8 wrap">
-            {[-60, -15, 15, 60].map((d) => <button key={d} className="btn sm" onClick={() => shift(d)}>{d < 0 ? '−' : '+'}{Math.abs(d) >= 60 ? `${Math.abs(d) / 60}h` : `${Math.abs(d)}m`}</button>)}
-          </div>
-          <div className="eyebrow mt-16 mb-8">Length</div>
-          <div className="row gap-8 wrap">{[25, 40, 50, 60, 90].map((l) => <button key={l} className={`btn sm ${l === len ? 'primary' : ''}`} onClick={() => size(l)}>{l}m</button>)}</div>
-          <div className="row between mt-16"><div><div style={{ fontWeight: 600 }}>Pin this session</div><div className="tiny muted">Re-planning will leave it exactly here</div></div><Toggle on={!!s.pinned} onChange={async (v) => { await editSession(s.id, { pinned: v }); onClose(); }} /></div>
+        {planned && <>
           <div className="pl-acts">
-            <button className="btn primary" onClick={async () => { await finishSession(s.id, 'DONE'); success(); onClose(); }}><Check size={16} /> Done</button>
-            <button className="btn" onClick={async () => { await finishSession(s.id, 'SKIPPED'); onClose(); }}>Skip</button>
+            <button className="btn primary" onClick={async () => { await startNow(s.id); onClose(); success(); }}><Play size={16} /> Start now</button>
+            <button className="btn" onClick={async () => { await finishSession(s.id, 'DONE'); success(); onClose(); }}><Check size={16} /> Done</button>
           </div>
+          <div className="list mt-12">
+            <button className="list-item" onClick={() => setPick(true)}><span className="grow">Do something else now</span><ChevronRight size={16} className="muted" /></button>
+            <button className="list-item" onClick={async () => { await skipSession(s.id); onClose(); toast('Moved to another time'); }}><span className="grow">Skip for today</span></button>
+            <button className="list-item" onClick={() => setAdjust(!adjust)}><span className="grow">Adjust time</span><ChevronRight size={16} className="muted" style={{ transform: adjust ? 'rotate(90deg)' : 'none' }} /></button>
+          </div>
+          {adjust && <div className="mt-12">
+            <div className="row gap-8 wrap">{[-60, -15, 15, 60].map((d) => <button key={d} className="btn sm" onClick={() => shift(d)}>{d < 0 ? '−' : '+'}{Math.abs(d) >= 60 ? `${Math.abs(d) / 60}h` : `${Math.abs(d)}m`}</button>)}</div>
+            <div className="row gap-8 wrap mt-8">{[25, 40, 50, 60, 90].map((l) => <button key={l} className={`btn sm ${l === len ? 'primary' : ''}`} onClick={() => size(l)}>{l}m</button>)}</div>
+            <div className="row between mt-12"><div className="small">Keep exactly here</div><Toggle on={!!s.pinned} onChange={async (v) => { await editSession(s.id, { pinned: v }); onClose(); }} /></div>
+          </div>}
         </>}
         {item.task && <button className="btn block mt-12" onClick={() => { onClose(); push('TaskForm', { id: item.task.id }); }}>Open task</button>}
       </> : item.event ? <>
         <div className="small muted">{hm12(item.start)}–{hm12(item.end)} · calendar event</div>
         <div className="pl-acts">
           <button className="btn" onClick={async () => { await db.calEvents.update(item.event.id, { treatAs: 'IGNORE' }); onClose(); toast('Ignored in the plan'); }}>Ignore</button>
-          <button className="btn primary" onClick={async () => { await eventToTask(item.event); onClose(); toast('Turned into a task'); }}>Turn into task</button>
+          <button className="btn primary" onClick={async () => { await eventToTask(item.event); onClose(); toast('Turned into a task'); }}>Make a task</button>
         </div>
       </> : null}
     </Sheet>
@@ -179,12 +173,13 @@ export function Timeline({ items, date, onOpen, showNow = true }) {
   );
 }
 
-/** The whole planner part of Today: check-in, plan note, Now card, at-risk, timeline. */
+/** The planner's day view (Plan tab): Now card, timeline, at-risk. */
 export default function PlanBlock() {
   const { push, settings, toast } = useApp();
   const t = today();
   const [, setTick] = useState(0);
   const [sel, setSel] = useState(null);
+  const [pick, setPick] = useState(false);
   useEffect(() => { const i = setInterval(() => setTick((x) => x + 1), 30000); return () => clearInterval(i); }, []);
   const ps = plannerSettings(settings);
   const data = useLiveQuery(async () => ({ ...(await dayData(t, settings)), meta: await getKV('planMeta', null), seen: await getKV('planNoteSeen', 0) }), [t, settings.wakeTarget]);
@@ -199,36 +194,41 @@ export default function PlanBlock() {
   return (
     <div>
       {!ps.setupDone && (
-        <button className="card card-press row gap-14 mt-12" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlannerSetup')}>
+        <button className="card card-press row gap-14" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlannerSetup')}>
           <div className="swatch" style={{ background: 'color-mix(in srgb, var(--accent) 16%, transparent)' }}><Sparkles size={20} color="var(--accent)" /></div>
-          <div className="grow"><div className="h3">Set up your planner</div><div className="small muted">Wake time, peak hours and fixed commitments · 1 minute</div></div>
+          <div className="grow"><div className="h3">Set up your planner</div><div className="small muted">Wake time, peak hours, fixed commitments</div></div>
           <ChevronRight size={18} className="muted" />
         </button>
       )}
-      <CheckinCard />
-      <div className="row between mt-12" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row between" style={{ gap: 8, flexWrap: 'wrap' }}>
         <div className="row gap-6 wrap">
           {chip && <span className="pl-chip">{chip}</span>}
-          {planned.length > 0 && <span className="pl-chip">{doneN}/{planned.length} sessions</span>}
+          {planned.length > 0 && <span className="pl-chip">{doneN}/{planned.length} done</span>}
         </div>
-        <button className="pl-chip" style={ctx.lowEnergy ? { background: 'color-mix(in srgb, var(--goal) 22%, var(--surface-2))', color: 'var(--text)' } : null} onClick={async () => { await setLowEnergy(!ctx.lowEnergy); tap(); toast(ctx.lowEnergy ? 'Back to the normal plan' : 'Lighter plan today'); }}><CloudRain size={14} />Low energy today</button>
+        <button className="pl-chip" style={ctx.lowEnergy ? { background: 'color-mix(in srgb, var(--goal) 22%, var(--surface-2))', color: 'var(--text)' } : null} onClick={async () => { await setLowEnergy(!ctx.lowEnergy); tap(); toast(ctx.lowEnergy ? 'Back to the normal plan' : 'Lighter plan today'); }}><CloudRain size={14} />Low energy</button>
       </div>
       {meta?.lowDay && <div className="small dim mt-8">Lighter plan today. Small steps count.</div>}
       {meta?.note && meta.noteId !== data.seen && (
         <div className="pl-note"><span>{meta.note}</span><button aria-label="Dismiss" onClick={() => setKV('planNoteSeen', meta.noteId)}><X size={16} /></button></div>
       )}
       {tl.banners.length > 0 && <div className="small dim mt-8"><Calendar size={13} style={{ verticalAlign: -2 }} /> {tl.banners.map((b) => b.title).join(' · ')}</div>}
-      <NowCard items={tl.items} ctx={ctx} onOpen={setSel} />
-      {pull && <button className="btn block mt-8" onClick={async () => { await setKV('pull', { date: t, taskId: pull.taskId }); toast('Pulled forward'); }}><Sparkles size={15} /> {pull.text} <span className="muted">· {pull.title}</span></button>}
+      <NowCard items={tl.items} onOpen={setSel} onPick={() => setPick(true)} />
+      {pull && <button className="btn block mt-8" onClick={async () => { await setKV('pull', { date: t, taskId: pull.taskId }); toast('Pulled forward'); }}><Sparkles size={15} /> {pull.text}</button>}
       {risk.length > 0 && (
         <button className="pl-risk" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlanWeek')}>
           <div style={{ fontWeight: 650 }}>{risk.length === 1 ? `“${risk[0].title}” is at risk` : `${risk.length} tasks are at risk`}</div>
-          <div className="small dim mt-4">Needs about {risk[0].shortH}h more than fits before the deadline. See options.</div>
+          <div className="small dim mt-4">It needs more time than fits before the deadline. See options.</div>
         </button>
       )}
-      <div className="row between mt-24"><div className="eyebrow">Today</div><button className="tiny muted" onClick={() => push('PlanWeek')}>Week</button></div>
+      <div className="eyebrow mt-24">Today</div>
       {tl.items.length ? <Timeline items={tl.items} date={t} onOpen={setSel} /> : <div className="small muted mt-8">Your day is open. Add a task and the plan fills in.</div>}
+      <div className="list mt-24">
+        <button className="list-item" onClick={() => push('PlanWeek')}><CalendarRange size={18} className="muted" /><span className="grow">This week</span><ChevronRight size={16} className="muted" /></button>
+        <button className="list-item" onClick={() => push('FixedSchedule')}><CalendarClock size={18} className="muted" /><span className="grow">Fixed schedule</span><ChevronRight size={16} className="muted" /></button>
+        <button className="list-item" onClick={() => push('PlannerInsights')}><Sparkles size={18} className="muted" /><span className="grow">Planner insights</span><ChevronRight size={16} className="muted" /></button>
+      </div>
       <SessionSheet item={sel} onClose={() => setSel(null)} />
+      <TaskPicker open={pick} onClose={() => setPick(false)} currentId={null} />
     </div>
   );
 }

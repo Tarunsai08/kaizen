@@ -42,3 +42,29 @@
 .pl-acts .btn.ic{flex:0 0 48px;padding:0}
 .pl-card.brk .t{font-weight:500;font-size:13px;color:var(--muted)}
 .pl-card.brk .s{font-size:12px;color:var(--faint)}
+.pl-acts .btn.quiet{flex:0 0 auto;padding:0 16px;background:transparent;border-color:transparent;color:var(--dim)}
+.pl-acts .btn.primary{flex:1}
+.plan-sticky{position:sticky;top:calc(-1 * (var(--safe-top) + 12px));z-index:6;background:var(--bg);margin:calc(-1 * (var(--safe-top) + 12px)) -16px 8px;padding:calc(var(--safe-top) + 12px) 16px 2px}
+.plan-sticky .subtabs{margin-bottom:10px}
+
+.wk-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wk-day{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0 6px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.wk-day.on{background:var(--text);border-color:var(--text)}
+.wk-day .l{font-size:11px;font-weight:650;color:var(--muted)}
+.wk-day .n{font-size:16px;font-weight:700;color:var(--text)}
+.wk-day.on .l,.wk-day.on .n{color:var(--bg)}
+.wk-day .bar{width:8px;height:30px;border-radius:4px;background:var(--surface-3);display:flex;align-items:flex-end;overflow:hidden}
+.wk-day .bar i{width:100%;border-radius:4px}
+.wk-day .dot{width:5px;height:5px;border-radius:3px;background:var(--goal)}
+.wk-sum{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+.wk-ring{width:52px;height:52px;border-radius:50%;background:conic-gradient(var(--accent) var(--p),var(--surface-3) 0);display:grid;place-items:center;position:relative}
+.wk-ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--bg)}
+.wk-ring span{position:relative;font-size:12px;font-weight:700}
+.sc-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.sc-days button{height:42px;border-radius:14px;background:var(--surface);border:1px solid var(--line);font-weight:700;font-size:14px;color:var(--dim);position:relative}
+.sc-days button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.sc-days button i{position:absolute;bottom:5px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:2px;background:var(--accent)}
+.sc-bar{position:relative;height:14px;border-radius:7px;background:var(--surface-3);margin-top:16px;overflow:hidden}
+.sc-bar b{position:absolute;top:0;bottom:0;opacity:.9}
+.sc-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px}
+.sc-card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px;border-left:4px solid var(--bc)}

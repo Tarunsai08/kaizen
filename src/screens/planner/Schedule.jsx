@@ -12,49 +12,39 @@ const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 const toHM = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 const toMin = (s) => { const [h, m] = (s || '0:0').split(':').map(Number); return h * 60 + m; };
-const H0 = 5, H1 = 24, PX = 26;
 
 export function FixedSchedule() {
-  const { settings } = useApp();
   const blocks = useLiveQuery(() => db.fixedBlocks.toArray(), []);
   const [edit, setEdit] = useState(null);
+  const [day, setDay] = useState(new Date().getDay());
   if (!blocks) return <div className="screen no-nav" />;
   const t = today();
+  const live = blocks.filter((b) => !(b.validUntil && b.validUntil < t));
+  const mine = live.filter((b) => b.days.includes(day)).sort((a, b) => a.start - b.start);
+  const blank = { title: '', type: 'CLASS', days: [day], start: 600, end: 660, flexible: false, validFrom: '', validUntil: '', notes: '' };
   return (
     <div className="screen no-nav page-enter">
-      <TopBar title="Fixed schedule" right={<button className="btn sm primary" onClick={() => setEdit({ title: '', type: 'CLASS', days: [1, 2, 3, 4, 5], start: 600, end: 660, flexible: false, validFrom: '', validUntil: '', notes: '' })}><Plus size={15} /> Add</button>} />
-      <div className="small dim">Classes, meals, gym and sleep. The planner works around these every day.</div>
-      <div className="eyebrow mt-16 mb-8">Quick add</div>
-      <div className="row gap-6 wrap">
-        {TEMPLATES.map((x) => <button key={x.title} className="pl-chip" onClick={() => setEdit({ ...x, flexible: !!x.flexible, flexStart: x.flexStart ?? x.start, flexEnd: x.flexEnd ?? x.end, validFrom: '', validUntil: '', notes: '' })}>{x.title}</button>)}
+      <TopBar title="Fixed schedule" right={<button className="btn sm primary" onClick={() => setEdit(blank)}><Plus size={15} /> Add</button>} />
+      <div className="small dim">Classes, meals, gym, sleep. Planning works around these.</div>
+      <div className="sc-days mt-16">
+        {ORDER.map((d) => <button key={d} className={day === d ? 'on' : ''} onClick={() => setDay(d)} aria-label={`Day ${d}`}>{DAY_LETTERS[d]}{live.some((b) => b.days.includes(d)) && day !== d && <i />}</button>)}
       </div>
-      <div className="pl-grid" style={{ height: (H1 - H0) * PX + 26 }}>
-        <div className="hours" style={{ paddingTop: 26 }}>
-          {Array.from({ length: (H1 - H0) / 2 + 1 }, (_, i) => H0 + i * 2).map((h) => <span key={h} style={{ top: 26 + (h - H0) * PX }}>{h % 24}</span>)}
-        </div>
-        {ORDER.map((d) => (
-          <div className="col" key={d}>
-            <div className="hd" style={d === new Date().getDay() ? { color: 'var(--accent)' } : null}>{DAY_LETTERS[d]}</div>
-            {blocks.filter((b) => b.days.includes(d) && !(b.validUntil && b.validUntil < t)).flatMap((b) => {
-              const over = b.end <= b.start;
-              const segs = over ? [[b.start, 1440]] : [[b.start, b.end]];
-              return segs.map(([s, e], i) => {
-                const top = Math.max(0, (s / 60 - H0) * PX), bottom = Math.min((H1 - H0) * PX, (e / 60 - H0) * PX);
-                if (bottom <= 0 || top >= bottom) return null;
-                return <button key={b.id + '-' + i} className="blk" aria-label={`${b.title} ${hm12(b.start)}`} style={{ top: 26 + top, height: Math.max(14, bottom - top), background: b.color || typeColor(b.type) }} onClick={() => setEdit(b)}>{b.title}</button>;
-              });
-            })}
-          </div>
-        ))}
+      <div className="sc-bar">
+        {mine.map((b) => { const e = b.end <= b.start ? 1440 : b.end; return <b key={b.id} style={{ left: `${(b.start / 1440) * 100}%`, width: `${((e - b.start) / 1440) * 100}%`, background: b.color || typeColor(b.type) }} />; })}
       </div>
-      <div className="list mt-16">
-        {blocks.sort((a, b) => a.start - b.start).map((b) => (
-          <button key={b.id} className="list-item" onClick={() => setEdit(b)}>
-            <span className="pill-dot" style={{ background: b.color || typeColor(b.type) }} />
-            <div className="grow"><div style={{ fontWeight: 560 }}>{b.title}</div><div className="tiny muted">{hm12(b.start)}–{hm12(b.end)} · {ORDER.filter((d) => b.days.includes(d)).map((d) => DAY_LETTERS[d]).join(' ')}{b.flexible ? ' · flexible' : ''}{b.validUntil ? ` · until ${b.validUntil}` : ''}</div></div>
+      <div className="sc-ticks"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>12 AM</span></div>
+      <div className="mt-16">
+        {mine.map((b) => (
+          <button key={b.id} className="sc-card" style={{ '--bc': b.color || typeColor(b.type) }} onClick={() => setEdit(b)}>
+            <div className="grow"><div style={{ fontWeight: 620 }}>{b.title}</div><div className="tiny muted">{hm12(b.start)} – {hm12(b.end)}{b.flexible ? ' · flexible' : ''}{b.validUntil ? ` · until ${b.validUntil}` : ''}</div></div>
+            <span className="tiny muted">{BLOCK_TYPES.find((x) => x.value === b.type)?.label}</span>
           </button>
         ))}
-        {!blocks.length && <div className="list-item muted small">Nothing yet. Tap a quick add above.</div>}
+        {!mine.length && <div className="small muted" style={{ padding: '14px 0' }}>Nothing fixed on this day. Add something or tap a quick add below.</div>}
+      </div>
+      <div className="eyebrow mt-16 mb-8">Quick add</div>
+      <div className="row gap-6" style={{ overflowX: 'auto', margin: '0 -16px', padding: '0 16px 4px' }}>
+        {TEMPLATES.map((x) => <button key={x.title} className="pl-chip" style={{ flexShrink: 0 }} onClick={() => setEdit({ ...x, days: [...new Set([...x.days.length === 7 ? x.days : [day, ...x.days]])], flexible: !!x.flexible, flexStart: x.flexStart ?? x.start, flexEnd: x.flexEnd ?? x.end, validFrom: '', validUntil: '', notes: '' })}>+ {x.title}</button>)}
       </div>
       <BlockSheet block={edit} onClose={() => setEdit(null)} />
     </div>

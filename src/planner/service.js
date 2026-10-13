@@ -156,12 +156,30 @@ export async function snoozeSession(id, mins = 10) {
   if (s) await db.plannedSessions.update(id, { start: s.start + mins, end: s.end + mins, pinned: true });
 }
 export async function editSession(id, patch) { await db.plannedSessions.update(id, { ...patch, pinned: patch.pinned ?? true }); }
-export async function swapSession(id) {
+/** Skip for today: the work moves to a later slot or day (unless it is due today) instead of reappearing right away. */
+export async function skipSession(id) {
   const s = await db.plannedSessions.get(id);
   if (!s) return;
-  const sw = await getKV('swapped', {});
-  await setKV('swapped', { ...sw, [s.taskId]: today() });
-  await db.plannedSessions.update(id, { state: 'SKIPPED', swapped: true, auto: true });
+  await finishSession(id, 'SKIPPED');
+  const t = s.taskId ? await db.tasks.get(s.taskId) : null;
+  if (t) await setKV('swapped', { ...(await getKV('swapped', {})), [t.id]: today() });
+}
+const roundNow = () => { const n = new Date(); return Math.ceil((n.getHours() * 60 + n.getMinutes()) / 5) * 5; };
+/** Do this session right now, whatever time it was planned for. */
+export async function startNow(id) {
+  const s = await db.plannedSessions.get(id);
+  if (!s) return;
+  const len = s.end - s.start, st = roundNow();
+  await db.plannedSessions.update(id, { date: today(), start: st, end: st + len, pinned: true, startedAt: Date.now() });
+}
+/** Start a different task now. The session it replaces just goes back into the pool and is re-planned later. */
+export async function doInstead(currentId, taskId, settings) {
+  const t = await db.tasks.get(taskId);
+  if (!t) return;
+  if (currentId) await db.plannedSessions.update(currentId, { state: 'SKIPPED', auto: true, swapped: true });
+  const ps = plannerSettings(settings), st = roundNow();
+  const open = (t.subtasks || []).find((x) => !x.done);
+  await db.plannedSessions.add({ date: today(), start: st, end: st + ps.sessionMin, taskId, subId: open?.id ?? null, kind: 'WORK', reason: 'You picked this one', title: open?.title || t.title, taskTitle: t.title, difficulty: open?.difficulty ?? t.difficulty ?? 2, state: 'PLANNED', pinned: true, startedAt: Date.now() });
 }
 export async function setLowEnergy(on) { await setKV('lowEnergy', on ? today() : ''); }
 

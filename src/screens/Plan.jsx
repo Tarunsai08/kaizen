@@ -12,6 +12,7 @@ import { success, tap } from '../lib/native';
 import { SubTabs, useSub } from '../ui/kit';
 import { CATEGORIES, estLabel } from '../scheduler';
 import './planner/planner.css';
+import PlanBlock from './planner/PlanToday';
 import { taskEstimate, plannerSettings } from '../planner/service';
 import { CalendarRange, GripVertical } from 'lucide-react';
 import { getKV } from '../db';
@@ -21,13 +22,15 @@ import { PeopleView } from './People';
    PLAN TAB (Tasks + Goals)
    ========================================================= */
 export function Plan() {
-  const [view, setView] = useSub('plan', 'tasks');
+  const [view, setView] = useSub('plan', 'day');
   const { push } = useApp();
   return (
     <div className="screen fade-in">
-      <div className="titlebar"><h1 className="h1">Plan</h1><button className="icon-btn" onClick={() => push('PlanWeek')} aria-label="Week plan"><CalendarRange size={19} /></button></div>
-      <SubTabs value={view} onChange={setView} options={[['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
-      {view === 'tasks' ? <TasksView /> : view === 'goals' ? <GoalsView /> : <PeopleView />}
+      <div className="plan-sticky">
+        <div className="titlebar"><h1 className="h1">Plan</h1><button className="icon-btn" onClick={() => push('PlanWeek')} aria-label="This week"><CalendarRange size={19} /></button></div>
+        <SubTabs value={view} onChange={setView} options={[['day', 'Day'], ['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
+      </div>
+      {view === 'day' ? <PlanBlock /> : view === 'tasks' ? <TasksView /> : view === 'goals' ? <GoalsView /> : <PeopleView />}
     </div>
   );
 }
@@ -36,6 +39,7 @@ function TasksView() {
   const { push, settings } = useApp();
   const [v, setV] = useState('plan');
   const [quick, setQuick] = useState('');
+  const [more, setMore] = useState({});
   const t = today();
   const data = useLiveQuery(async () => ({
     tasks: await db.tasks.filter((x) => !x.skipped).toArray(),
@@ -66,9 +70,18 @@ function TasksView() {
       ['Someday', open.filter((x) => !x.due)],
     ].filter(([, l]) => l.length);
     body = <>
-      {groups.length ? groups.map(([name, l]) => (
-        <div key={name} className="mb-16"><div className="eyebrow mb-8">{name} · {l.length}</div><div className="list">{l.map((x) => <TaskRow key={x.id} t={x} showDate={name !== 'Today' || x.due !== t} projects={projects} goals={goals} plan={{ risk: risk.has(x.id), est: taskEstimate(x, settings) }} />)}</div></div>
-      )) : <Empty icon="☀️" title="All clear" sub="Add a task and the planner finds time for it." />}
+      {groups.length ? groups.map(([name, l]) => {
+        const collapsed = (name === 'Later' || name === 'Someday') && !more[name];
+        return (
+          <div key={name} className="mb-16">
+            <button className="row between mb-8" style={{ width: '100%' }} onClick={() => (name === 'Later' || name === 'Someday') && setMore({ ...more, [name]: !more[name] })}>
+              <span className="eyebrow">{name} · {l.length}</span>
+              {(name === 'Later' || name === 'Someday') && <span className="tiny muted">{collapsed ? 'Show' : 'Hide'}</span>}
+            </button>
+            {!collapsed && <div className="list">{l.map((x) => <TaskRow key={x.id} t={x} showDate={name !== 'Today' || x.due !== t} projects={projects} goals={goals} plan={{ risk: risk.has(x.id), est: taskEstimate(x, settings) }} />)}</div>}
+          </div>
+        );
+      }) : <Empty icon="☀️" title="All clear" sub="Add a task and the planner finds time for it." />}
       {doneToday.length > 0 && <><div className="eyebrow mt-24 mb-8">Done today · {doneToday.length}</div><div className="list">{doneToday.map((x) => <TaskRow key={x.id} t={x} projects={projects} goals={goals} />)}</div></>}
     </>;
   } else if (v === 'projects') {
@@ -88,12 +101,6 @@ function TasksView() {
       })}
       <button className="btn block" onClick={() => push('Projects')}><FolderKanban size={16} /> Manage projects</button>
     </>;
-  } else if (v === 'category') {
-    body = [...cats, { id: null, name: 'No category', icon: '•' }].map((c) => {
-      const l = sortT(open.filter((x) => (x.categoryId || null) === c.id));
-      if (!l.length) return null;
-      return <div key={c.id ?? 'none'} className="mb-16"><div className="eyebrow mb-8">{c.icon} {c.name}</div><div className="list">{l.map((x) => <TaskRow key={x.id} t={x} projects={projects} goals={goals} />)}</div></div>;
-    });
   } else if (v === 'done') {
     const l = tasks.filter((x) => x.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 100);
     body = l.length ? <div className="list">{l.map((x) => <TaskRow key={x.id} t={x} projects={projects} goals={goals} />)}</div> : <Empty title="Nothing completed yet" />;
@@ -101,7 +108,7 @@ function TasksView() {
 
   return (
     <div className="mt-16">
-      <Chips value={v} onChange={setV} options={[{ value: 'plan', label: 'Plan' }, { value: 'projects', label: 'Projects' }, { value: 'category', label: 'Category' }, { value: 'done', label: 'Done' }, { value: 'stats', label: 'Stats' }]} />
+      <Chips value={v} onChange={setV} options={[{ value: 'plan', label: 'Plan' }, { value: 'projects', label: 'Projects' }, { value: 'done', label: 'Done' }, { value: 'stats', label: 'Stats' }]} />
       {v === 'plan' && (
         <div className="row mt-16">
           <input className="input grow" placeholder="Add a task…" value={quick} onChange={(e) => setQuick(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addQuick()} />
@@ -179,7 +186,7 @@ export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
         {x.due && x.dueTime && (
           <Field label="Duration (for your timeline)"><Chips value={x.duration || 30} onChange={(v) => set({ duration: v })} options={[15, 30, 45, 60, 90, 120].map((v) => ({ value: v, label: v < 60 ? `${v}m` : `${v / 60}h` }))} /></Field>
         )}
-        <Field label="Planner">
+        <Field label="Planner (optional)">
           <div className="small dim mb-8">How hard is it? The planner turns this into sessions.</div>
           <div className="pl-dots">{[1, 2, 3, 4, 5].map((n) => <button key={n} className={x.difficulty === n ? 'on' : ''} aria-label={`Difficulty ${n}`} onClick={() => set({ difficulty: x.difficulty === n ? undefined : n })}>{n}</button>)}</div>
           <div className="mt-12"><Chips wrap value={x.pcat || null} onChange={(v) => set({ pcat: v })} options={CATEGORIES} /></div>
@@ -198,7 +205,6 @@ export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
             <div className="list-item"><Plus size={16} className="muted" /><input className="grow" style={{ background: 'none', border: 0 }} placeholder="Add a step" value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && sub.trim()) { set({ subtasks: [...(x.subtasks || []), { id: uid(), title: sub.trim(), done: false }] }); setSub(''); } }} /></div>
           </div>
         </Field>
-        <Field label="Category"><CategorySelect kind="task" value={x.categoryId} onChange={(v) => set({ categoryId: v })} /></Field>
         <div className="grid-2">
           <Field label="Project">
             <select className="select" value={x.projectId || ''} onChange={(e) => set({ projectId: e.target.value ? Number(e.target.value) : null })}>

@@ -217,6 +217,7 @@ export function buildPlan(input) {
       const r = t.recurring;
       if (r.from && date < r.from) continue;
       if (r.days && !r.days.includes(dow)) continue;
+      if (di === 0 && t.deferToday) continue;
       if (t.deadline != null && date > ymd(new Date(t.deadline)) && !r.ghost) continue;
       const len = Math.min(r.minutes || 60, 90);
       const opts = slotsBy[date].filter((s) => s.end - s.start >= Math.min(len, 25));

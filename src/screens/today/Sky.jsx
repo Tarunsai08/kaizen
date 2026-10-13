@@ -5,8 +5,6 @@ import { fmtHM } from '../../lib/date';
 import Companion from '../../ui/Companion';
 import { useToday } from './useToday';
 import { QuickSheet } from './shared';
-import PlanBlock from '../planner/PlanToday';
-import { MoreButton } from '../planner/More';
 import { useApp } from '../../ctx';
 
 /* The original "Sky" layout (light up a star for everything you finish), now carrying the whole day. */
@@ -54,11 +52,10 @@ export default function TodaySky() {
         <div className={`sky-sun ${S.k}`} style={{ left: `${sunX}%`, top: `${sunY}%` }} />
         <div className="sky-head">
           <div><div className="sky-eyebrow">{D.dateLabel}</div><div className="sky-title">{allLit ? 'Your sky is full' : D.greeting}</div></div>
-          <div className="row gap-8"><MoreButton />
           <button className="tl-avatar" onClick={go.you} aria-label="You">
             <span style={{ marginTop: 6 }}><Companion stage={D.stage.index} mood={D.kaiMood} size={42} /></span>
             <b>{D.xp.level}</b>
-          </button></div>
+          </button>
         </div>
         {orbs.map((o, i) => {
           const [x, y] = ORB_SPOTS[i];
@@ -99,9 +96,9 @@ export default function TodaySky() {
         <button className="sky-add" onClick={go.plan}>Plan <ChevronRight size={14} /></button>
       </div>
 
-      {D.prompts.filter((p) => !['morning', 'night'].includes(p.k)).length > 0 && (
+      {D.prompts.length > 0 && (
         <div className="col gap-8 mt-12">
-          {D.prompts.filter((p) => !['morning', 'night'].includes(p.k)).map((p) => {
+          {D.prompts.map((p) => {
             const I = PROMPT_ICON[p.k] || Moon;
             return (
               <button key={p.k} className="tl-prompt" style={{ '--pc': `var(--${p.tone})` }} onClick={p.go}>
@@ -121,9 +118,12 @@ export default function TodaySky() {
         </div>
       )}
 
-      <PlanBlock />
-
       <div className="grid-2 mt-12">
+        <button className="sky-card" onClick={go.plan}>
+          <span className="k"><Clock size={13} /> {nn ? nn.when : 'Next'}</span>
+          <span className="t ellipsis">{nn ? nn.title : 'Free time'}</span>
+          <span className="s">{nn ? (nn.when === 'Now' ? 'happening now' : fmtHM(nn.start)) : 'nothing planned'}{D.energy ? ` · ${D.energy.label}` : ''}</span>
+        </button>
         {mod('study') && <button className="sky-card" onClick={() => (ns ? ns.go() : go.study())} style={{ '--sc': ns?.color }}>
           <span className="k"><GraduationCap size={13} /> {ns ? ns.title : 'Study'}</span>
           <span className="t ellipsis">{ns ? ns.next : 'All roadmaps'}</span>

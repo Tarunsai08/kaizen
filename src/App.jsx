@@ -44,7 +44,7 @@ import { PlannerSetup } from './screens/planner/Setup';
 import { InsightsTab } from './screens/planner/PlannerInsights';
 import { MoreMenu, WrapUp } from './screens/planner/More';
 import { usePlannerEngine } from './planner/engine';
-import { startSession, finishSession, extendSession, snoozeSession } from './planner/service';
+import { startSession, finishSession, skipSession, extendSession, snoozeSession } from './planner/service';
 
 const SCREENS = {
   HabitForm, HabitDetail, Urge,
@@ -130,6 +130,23 @@ export default function App() {
   const celebrate = useCallback(() => setConfetti((c) => c + 1), []);
   const goTab = useCallback((k) => { tap(); setTab(k); setStack([]); }, []);
 
+  // swipe left/right to move between tabs (not inside sheets, inputs or sideways-scrolling rows)
+  const swipe = useRef(null);
+  const onTS = (e) => {
+    const p = e.touches[0];
+    let el = e.target, ok = !el.closest?.('input,textarea,select,.sheet,.sheet-backdrop,[data-noswipe]');
+    while (ok && el && el !== document.body) { if (el.scrollWidth > el.clientWidth + 4 && /(auto|scroll)/.test(getComputedStyle(el).overflowX)) ok = false; el = el.parentElement; }
+    swipe.current = { x: p.clientX, y: p.clientY, ok };
+  };
+  const onTE = (e) => {
+    const s = swipe.current; swipe.current = null;
+    if (!s || !s.ok || stateRef.current.stack.length) return;
+    const p = e.changedTouches[0], dx = p.clientX - s.x, dy = p.clientY - s.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    const i = TABS.findIndex((x) => x.key === stateRef.current.tab), j = i + (dx < 0 ? 1 : -1);
+    if (j >= 0 && j < TABS.length) goTab(TABS[j].key);
+  };
+
   // Android back button
   const stateRef = useRef();
   stateRef.current = { stack, tab };
@@ -167,7 +184,7 @@ export default function App() {
         if (action === 'start') await startSession(extra.id);
         else if (action === 'done') await finishSession(extra.id, 'DONE');
         else if (action === 'partial') await finishSession(extra.id, 'PARTIAL');
-        else if (action === 'skip') await finishSession(extra.id, 'SKIPPED');
+        else if (action === 'skip') await skipSession(extra.id);
         else if (action === 'snooze') await snoozeSession(extra.id, 10);
         else if (action === 'more') await extendSession(extra.id, 15);
         else setTab('today');
@@ -275,7 +292,7 @@ export default function App() {
 
   return (
     <AppCtx.Provider value={ctx}>
-      <div className="app">
+      <div className="app" onTouchStart={onTS} onTouchEnd={onTE}>
         {/* keep tab mounted underneath so scroll position survives */}
         <div style={{ display: Pushed ? 'none' : 'contents' }}>
           <ErrorBoundary key={tab} onBack={() => setTab('today')}><TabC /></ErrorBoundary>
