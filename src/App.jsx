@@ -14,6 +14,7 @@ import { syncShieldEvents, pushShieldConfig } from './lib/screen';
 import { hcSync } from './lib/health';
 import { updateWidgets } from './lib/widgets';
 import { rescheduleSoon, registerActions, ensurePermission } from './lib/notify';
+import { applyPlColor } from './lib/plcolor';
 import { today, nowHM, setDayStart, setEarlyStart } from './lib/date';
 
 import Today from './screens/Today';
@@ -110,14 +111,14 @@ export default function App() {
   useEffect(() => { setSoundEnabled(settings.sound); }, [settings.sound]);
   // theme
   useEffect(() => {
-    document.documentElement.dataset.theme = settings.theme;
+    document.documentElement.dataset.theme = settings.theme; applyPlColor(settings.plannerColor, settings.theme);
     const meta = document.querySelector('meta[name=theme-color]');
     if (meta) meta.content = settings.theme === 'light' ? '#f4f4f1' : '#000000';
     if (isNative) {
       StatusBar.setStyle({ style: settings.theme === 'light' ? Style.Light : Style.Dark }).catch(() => {});
       StatusBar.setBackgroundColor({ color: settings.theme === 'light' ? '#f4f4f1' : '#000000' }).catch(() => {});
     }
-  }, [settings.theme]);
+  }, [settings.theme, settings.plannerColor]);
 
   const push = useCallback((name, props = {}) => { tap(); setStack((s) => [...s, { name, props, key: Math.random() }]); }, []);
   const pop = useCallback(() => setStack((s) => s.slice(0, -1)), []);

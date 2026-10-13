@@ -1,3 +1,4 @@
+import { PL_COLORS } from '../lib/plcolor';
 import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { BookOpen, Sparkles, CalendarDays, Smile, Wind, Globe, Palette, Settings as Cog, ChevronRight, Download, Upload, Lock, Bell, Moon, Sun, Tags, Trash2, Repeat } from 'lucide-react';
@@ -98,6 +99,7 @@ export function Settings() {
       <div className="form">
         <Field label="Your name"><input className="input" value={settings.name} onChange={(e) => set('name', e.target.value)} placeholder="Tarun" /></Field>
         <Field label="Theme"><Seg value={settings.theme} onChange={(v) => set('theme', v)} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} /></Field>
+        <Field label="Planner colour" hint="Used for Start buttons, the day timeline and week charts in the Plan tab."><div className="row gap-10 wrap">{Object.entries(PL_COLORS).map(([k, c]) => <button key={k} aria-label={c.label} onClick={() => set('plannerColor', k)} style={{ width: 38, height: 38, borderRadius: 19, background: settings.theme === 'light' ? c.l[0] : c.d[0], border: (settings.plannerColor || 'indigo') === k ? '3px solid var(--text)' : '3px solid transparent', boxShadow: '0 0 0 1px var(--line-2)' }} />)}</div></Field>
 
         <div className="eyebrow mt-8">Sleep & daily rhythm</div>
         <div className="grid-2">

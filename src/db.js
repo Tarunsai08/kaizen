@@ -106,6 +106,7 @@ export const DEFAULT_SETTINGS = {
   dayStart: '06:00',
   earlyStart: '',
   todayLayout: 'classic',
+  plannerColor: 'indigo',
   planner: { sessionMin: 50, breakMin: 10, capacityH: 6, bufferMin: 10, deadlineBufferDays: 1, factors: {}, calendars: [], taskPrefix: '[T]', wrapTime: '21:30', alertSession: true, alertWrap: true, alertRisk: true, setupDone: false },
   modules: { study: true, money: true, boredom: true, mind: true, screen: true, journal: true, people: true },
   plannerStats: { correction: {}, energy: {} },
