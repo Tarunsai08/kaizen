@@ -16,7 +16,6 @@ import { useToday } from '../screens/today/useToday';
 import { useFlash, Kai } from '../screens/today/shared';
 import { QuickEntry } from './QuickEntry';
 import { personStatus } from '../screens/People';
-import { softColor } from './mode';
 import './today.css';
 
 const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -30,13 +29,11 @@ export default function StudioToday() {
   const { settings, push } = useApp();
   const [qe, setQe] = useState(null);
   const [showDone, setShowDone] = useState(false);
-  const [openTodos, setOpenTodos] = useState(false);
   const [flash, doFlash] = useFlash(1100);
   const [, tick] = useState(0);
   const order = useRef([]);
   useEffect(() => { const i = setInterval(() => tick((x) => x + 1), 30000); return () => clearInterval(i); }, []);
   const t = today();
-  const sc = (c) => softColor(c, settings.theme !== 'light');
   const plan = useLiveQuery(() => dayData(t, settings), [t, settings.wakeTarget]);
   const people = useLiveQuery(async () => {
     const [ps, inter] = await Promise.all([db.people.toArray(), db.interactions.toArray()]);
@@ -186,11 +183,12 @@ export default function StudioToday() {
 
       {/* habits: one card, rings spread evenly */}
       {D.habits.length > 0 ? (
-        <section className="st-card">
-          <div className="st-ch"><b>Habits</b><span>{D.habits.filter((h) => h.done).length}/{D.habits.length} done</span><button onClick={go.habits}>All</button></div>
+        <>
+        <Lab t="Habits" s={`${D.habits.filter((h) => h.done).length}/${D.habits.length} done`} on={go.habits} />
+        <section className="st-card st-habcard">
           <div className={`st-habits ${D.habits.length > 4 ? 'scroll' : ''}`} style={{ '--n': Math.min(4, Math.max(3, D.habits.length)) }}>
             {D.habits.map((h) => (
-              <div key={h.key} className={`st-hb ${h.done ? 'done' : ''} ${flash[h.key] ? 'flash-' + flash[h.key] : ''}`} style={{ '--c': sc(h.color) }}>
+              <div key={h.key} className={`st-hb ${h.done ? 'done' : ''} ${flash[h.key] ? 'flash-' + flash[h.key] : ''}`} style={{ '--c': h.color }}>
                 <button className="c" onClick={() => doHabit(h)} aria-label={h.name}>
                   <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" className="bg" /><circle cx="24" cy="24" r="21" className="fg" pathLength="100" strokeDasharray={`${h.prog * 100} 100`} /></svg>
                   <span className="ic"><HIcon icon={h.icon} size={20} color="currentColor" /></span>
@@ -202,16 +200,14 @@ export default function StudioToday() {
             {D.habits.length < 3 && <div className="st-hb add"><button className="c" onClick={go.addHabit} aria-label="New habit"><span className="ic"><Plus size={20} /></span></button><span className="n"><span>New habit</span></span></div>}
           </div>
         </section>
+        </>
       ) : (
         <button className="st-card st-empty-card" onClick={go.addHabit}><span className="ic"><Plus size={18} /></span><span className="grow"><b>Add your first habit</b><small>Something small to repeat every day</small></span></button>
       )}
 
       {/* every to-do, once */}
-      <button className={`st-todohead ${openTodos ? 'open' : ''}`} onClick={() => { tap(); setOpenTodos(!openTodos); }}>
-        <span className="grow"><b>To-dos</b><small>{todoSummary}</small></span>
-        <ChevronRight size={18} className="chev" />
-      </button>
-      {openTodos && <>
+      <Lab t="To-dos" s={todoSummary} on={go.plan} a="Plan" />
+      {<>
       <div className="st-list">
         {listDay.map(todo)}
         {!listDay.length && !eve.length && !fallback && <div className="st-empty"><Star size={40} strokeWidth={1.2} /><span>{done.length ? 'All done for today.' : 'Nothing on your list.'}</span><button onClick={() => setQe('today')}>Add a to-do</button></div>}
@@ -228,8 +224,8 @@ export default function StudioToday() {
 
       {/* goals */}
       {D.goals.length > 0 && (
-        <section className="st-card">
-          <div className="st-ch"><b>Goals</b><span>{D.goals.length} active</span><button onClick={go.goals}>All</button></div>
+        <section className="st-quiet">
+          <Lab t="Goals" s={`${D.goals.length} active`} on={go.goals} />
           {D.goals.slice(0, 3).map((g) => (
             <button key={g.key} className="st-goal" style={{ '--c': g.color }} onClick={g.go}>
               <span className="grow tx"><b className="ellipsis">{g.title}</b><small>{g.kind} · {g.label}{g.checkinDue ? ' · check in' : ''}</small></span>
@@ -241,12 +237,12 @@ export default function StudioToday() {
 
       {/* study */}
       {settings.modules?.study !== false && D.study && D.study.subjects.length > 0 && (
-        <section className="st-card">
-          <div className="st-ch"><b>Keep learning</b><span>{D.study.streak ? `${D.study.streak}-day streak` : 'today'}</span><button onClick={D.study.all}>Study</button></div>
+        <section className="st-quiet">
+          <Lab t="Keep learning" s={`${D.study.subjects.reduce((a, x) => a + x.mins, 0)} of ${D.study.subjects.reduce((a, x) => a + x.goal, 0)} min${D.study.streak ? ` · ${D.study.streak}-day streak` : ''}`} on={D.study.all} a="Study" />
           {D.study.subjects.map((sj) => (
-            <button key={sj.key} className="st-sj" style={{ '--c': sc(sj.color) }} onClick={sj.go}>
-              <span className="ic"><HIcon icon={sj.icon} size={18} color="#fff" /></span>
-              <span className="grow tx"><small>{sj.title}</small><b className="ellipsis">{sj.next}</b><span className="pb"><i style={{ width: `${Math.round(sj.prog * 100)}%` }} /></span></span>
+            <button key={sj.key} className="st-sj rail" style={{ '--c': sj.color }} onClick={sj.go}>
+              <span className="rl" />
+              <span className="grow tx"><small>{sj.title}</small><b className="ellipsis">{sj.next}</b></span>
               <span className="mins num">{sj.mins}<small>/{sj.goal}m</small></span>
             </button>
           ))}
@@ -256,12 +252,12 @@ export default function StudioToday() {
 
       {/* people */}
       {settings.modules?.people !== false && people && (
-        <section className="st-card">
-          <div className="st-ch"><b>People</b><span>{people.due ? `${people.due} to reach out to` : 'all in touch'}</span><button onClick={() => push('Space', { k: 'people' })}>All</button></div>
+        <section className="st-quiet">
+          <Lab t="People" s={people.due ? `${people.due} to reach out to` : 'all in touch'} on={() => push('Space', { k: 'people' })} />
           {people.list.length ? (
             <div className="st-people">
               {people.list.map(({ p, s: ps }) => (
-                <button key={p.id} className={`st-pp ${ps.due ? 'due' : ''}`} style={{ '--c': sc(p.color || '#a78bfa') }} onClick={() => push('PersonDetail', { id: p.id })}>
+                <button key={p.id} className={`st-pp calm ${ps.due ? 'due' : ''}`} onClick={() => push('PersonDetail', { id: p.id })}>
                   <span className="av">{(p.name || '?').slice(0, 1).toUpperCase()}{ps.due && <i />}</span>
                   <b className="ellipsis">{p.name}</b>
                   <small>{ps.since == null ? 'say hi' : ps.since === 0 ? 'today' : `${ps.since}d ago`}</small>
@@ -327,3 +323,13 @@ function Tile({ c, I, k, t, s, on }) {
   );
 }
 export { db };
+
+/** Quiet section label: TITLE · detail, with a link on the right. */
+function Lab({ t, s, on, a = 'All' }) {
+  return (
+    <div className="st-lab">
+      <span>{t}{s ? <em> · {s}</em> : null}</span>
+      {on && <button onClick={on}>{a}</button>}
+    </div>
+  );
+}

@@ -9,9 +9,9 @@ export const PL_COLORS = {
   amber: { label: 'Amber', d: ['#f5b84d', '#3a2606'], l: ['#c27a08', '#fff'], sd: ['#d9bb7e', '#2e220d'] },
   lime: { label: 'Lime', d: ['#c8f35a', '#0d1400'], l: ['#5b8c00', '#fff'], sd: ['#bcd38c', '#171f08'] },
 };
-export function applyPlColor(name, theme, studio = false) {
+export function applyPlColor(name, theme) {
   const c = PL_COLORS[name] || PL_COLORS.indigo;
-  const [bg, ink] = theme === 'light' ? c.l : studio && c.sd ? c.sd : c.d;
+  const [bg, ink] = theme === 'light' ? c.l : c.d;
   const r = document.documentElement.style;
   r.setProperty('--pl', bg); r.setProperty('--pl-ink', ink);
 }

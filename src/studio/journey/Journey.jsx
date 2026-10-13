@@ -16,11 +16,10 @@ import { findNode, isLeaf, firstUndone, lastCompleted, subjectTally } from '../.
 import { useStudy, useStudyToday, AddSubjectSheet } from '../../screens/Study';
 import { useSubject } from '../../screens/Roadmap';
 import { useXP } from '../../screens/You';
-import { softColor } from '../mode';
 import './journey.css';
 
 const leavesOf = (n) => { const out = []; const go = (x) => (isLeaf(x) ? out.push(x) : (x.children || []).forEach(go)); go(n); return out; };
-const tint = (subject, settings) => ({ '--sc': softColor(subject?.color || '#f7931e', settings.theme !== 'light') });
+const tint = (subject) => ({ '--sc': subject?.color || '#f7931e' });
 const pad2 = (n) => String(n).padStart(2, '0');
 const hash = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
 const ART = [Rocket, Plane, Magnet, Atom, Telescope, Puzzle, Compass, Sigma, Binary, Database, Network, Cpu, Layers, Lightbulb, Brain, Code];

@@ -264,6 +264,7 @@ export default function PlanBlock() {
         {date !== t && <button className="pd-today" onClick={() => { tap(); setDate(t); }}>Back to today</button>}
       </div>
       {tl.banners.length > 0 && <AllDay events={tl.banners} />}
+      <NowCard items={tl.items} onOpen={setSel} onPick={() => setPick(true)} />
 
       <div className="tl">
         <div className="tl-line" />
@@ -348,7 +349,6 @@ export default function PlanBlock() {
           {meta?.note && meta.noteId !== data.seen && (
             <div className="pl-note"><span>{meta.note}</span><button aria-label="Dismiss" onClick={() => setKV('planNoteSeen', meta.noteId)}><X size={16} /></button></div>
           )}
-          <NowCard items={tl.items} onOpen={setSel} onPick={() => setPick(true)} />
           {pull && <button className="btn block mt-8" onClick={async () => { await setKV('pull', { date: t, taskId: pull.taskId }); toast('Pulled forward'); }}><Sparkles size={15} /> {pull.text}</button>}
           {risk.length > 0 && (
             <button className="pl-risk" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlanWeek')}>

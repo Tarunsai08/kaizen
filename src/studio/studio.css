@@ -10,33 +10,32 @@
 
 /* ---------- tokens: dark (warm charcoal, never pure black) ---------- */
 :root[data-ui='studio'] {
-  /* dark: warm charcoal, off-white text (no pure white glare) and softened, desaturated colours */
-  --bg: #111113;
-  --bg-2: #151517;
-  --surface: #1a1a1d;
-  --surface-2: #222225;
-  --surface-3: #2c2c30;
+  --bg: #0e0e10;
+  --bg-2: #131316;
+  --surface: #18181b;
+  --surface-2: #202024;
+  --surface-3: #2a2a2f;
   --line: rgba(255, 255, 255, 0.06);
-  --line-2: rgba(255, 255, 255, 0.1);
-  --text: #ebe9e4;
-  --text-2: #b4b1aa;
-  --muted: #868480;
-  --faint: #55534f;
+  --line-2: rgba(255, 255, 255, 0.11);
+  --text: #f4f3ef;
+  --text-2: #bdbbb4;
+  --muted: #8a8882;
+  --faint: #56544f;
 
-  --accent: var(--pl, #9aa2e4);
-  --accent-ink: var(--pl-ink, #14172f);
-  --habit: #7cc39b;
-  --break: #df8c8c;
-  --fit: #dfa47c;
-  --sleep: #a3a9de;
-  --money: #7fb5d6;
-  --task: #b1a6da;
-  --goal: #d6bd78;
-  --mood: #d7a1ba;
-  --bored: #78bdb1;
-  --good: #7cc39b;
-  --warn: #d6bd78;
-  --bad: #df8c8c;
+  --accent: var(--pl, #8f9bff);
+  --accent-ink: var(--pl-ink, #10133a);
+  --habit: #5fd394;
+  --break: #ff7d7d;
+  --fit: #ffa463;
+  --sleep: #9ea6ff;
+  --money: #5cc6f5;
+  --task: #b7a1ff;
+  --goal: #f5ca55;
+  --mood: #f592c1;
+  --bored: #52d6c4;
+  --good: #5fd394;
+  --warn: #f5ca55;
+  --bad: #ff7d7d;
 
   --r-sm: 12px;
   --r: 18px;
@@ -260,14 +259,11 @@
 .sp-l small { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; }
 .sp-ok { position: absolute; right: 16px; bottom: 16px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); }
 
-/* dark: calmer — no coloured glows, a fainter accent wash */
-:root[data-ui='studio']:not([data-theme='light']) .app::before { background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 8%, transparent), transparent); }
-:root[data-ui='studio']:not([data-theme='light']) .btn.primary,
-:root[data-ui='studio']:not([data-theme='light']) .fab,
-:root[data-ui='studio']:not([data-theme='light']) .st-plus,
-:root[data-ui='studio']:not([data-theme='light']) .st-now .go,
-:root[data-ui='studio']:not([data-theme='light']) .st-sj .ic,
-:root[data-ui='studio']:not([data-theme='light']) .datestrip button.on { box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.8); }
-:root[data-ui='studio']:not([data-theme='light']) .sr .fg { filter: none; }
-:root[data-ui='studio']:not([data-theme='light']) .st-score::after { background: radial-gradient(circle, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%); }
-:root[data-ui='studio']:not([data-theme='light']) .nav button.on { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+/* flat: no coloured or gradient glows under buttons, rings and cards (both themes) */
+:root[data-ui='studio'] .btn.primary,
+:root[data-ui='studio'] .fab,
+:root[data-ui='studio'] .st-plus,
+:root[data-ui='studio'] .st-now .go,
+:root[data-ui='studio'] .datestrip button.on { box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.35); }
+:root[data-ui='studio'] .sr .fg { filter: none; }
+:root[data-ui='studio'] .st-score::after { display: none; }

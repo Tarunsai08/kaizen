@@ -242,3 +242,21 @@
 .st-hb .tick { position: absolute; right: -1px; bottom: -1px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: #34b36a; box-shadow: 0 0 0 2.5px var(--surface); transform: scale(0); transition: transform 0.45s var(--spring); }
 .st-hb.done .tick { transform: scale(1); }
 .st-hb.done .n span { color: var(--text-2); }
+
+/* quiet layout: small uppercase labels, plain rows below the Now card */
+.st-lab { display: flex; align-items: center; gap: 8px; margin: 22px 4px 8px; font-size: 12px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.st-lab span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-lab em { font-style: normal; }
+.st-lab button { letter-spacing: 0; text-transform: none; font-size: 13px; font-weight: 700; color: var(--accent); }
+.st-habcard { padding-top: 14px; }
+.st-quiet { margin: 0; }
+.st-quiet .st-goal, .st-quiet .st-sj { padding-left: 2px; padding-right: 2px; }
+.st-quiet .st-goal + .st-goal, .st-quiet .st-sj + .st-sj { box-shadow: inset 0 1px 0 var(--line); }
+.st-sj.rail { align-items: stretch; }
+.st-sj.rail .rl { width: 3px; border-radius: 3px; flex-shrink: 0; background: var(--c); }
+.st-sj.rail .mins { align-self: center; }
+.st-quiet .st-people { padding: 4px 0 0; margin-top: 0; }
+/* people: neutral avatars, the accent only says who's due */
+.st-pp.calm .av { background: var(--surface-2); color: var(--text-2); box-shadow: none; border: 0; }
+.st-pp.calm .av i { background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.st-pp.calm.due small { color: var(--accent); }
