@@ -1,0 +1,25 @@
+/* Studio · Tasks (Things 3) */
+.tk-lists { border-radius: 20px; background: var(--surface); box-shadow: var(--z-card); overflow: hidden; }
+.tk-li { display: flex; align-items: center; gap: 14px; width: 100%; padding: 13px 16px; text-align: left; font-size: 16px; font-weight: 600; transition: background 0.2s; }
+.tk-li + .tk-li { box-shadow: inset 50px 1px 0 -49px var(--line); }
+.tk-li:active { background: var(--surface-2); }
+.tk-li.dim { color: var(--muted); }
+.tk-n { font-size: 14px; color: var(--muted); font-weight: 600; }
+.tk-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; display: grid; place-items: center; background: var(--bad); color: #fff; font-size: 12px; font-weight: 800; }
+.tk-sh { display: flex; align-items: center; justify-content: space-between; margin: 26px 4px 10px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.tk-sh button { color: var(--accent); font-weight: 700; }
+.tk-pie { display: inline-block; flex-shrink: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.8px var(--c); }
+.tk-page { padding-top: calc(var(--safe-top) + 10px) !important; }
+.tk-back { margin-left: -10px; }
+.tk-title { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; font-size: 32px; font-weight: 800; letter-spacing: -0.035em; }
+.tk-notes { margin: 8px 0 0; color: var(--text-2); font-size: 15px; line-height: 1.45; }
+.tk-body { margin-top: 14px; }
+.tk-day { margin-bottom: 10px; }
+.tk-dh { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 4px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.tk-dh b { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+.tk-dh span { font-size: 15px; font-weight: 700; color: var(--muted); }
+.tk-dh.m span { font-size: 17px; color: var(--text); font-weight: 780; }
+.tk-empty { margin-top: 60px; text-align: center; color: var(--muted); font-weight: 600; }
+.tk-moon { color: var(--sleep); flex-shrink: 0; }
+.st-td small span + span::before { content: ' · '; color: var(--faint); }
+.st-td small .od { color: var(--bad); font-weight: 700; }

@@ -17,20 +17,23 @@ import { taskEstimate, plannerSettings } from '../planner/service';
 import { CalendarRange, GripVertical } from 'lucide-react';
 import { getKV } from '../db';
 import { PeopleView } from './People';
+import { isStudio } from '../studio/mode';
+import { ThingsHome } from '../studio/Tasks';
 
 /* =========================================================
    PLAN TAB (Tasks + Goals)
    ========================================================= */
 export function Plan() {
   const [view, setView] = useSub('plan', 'day');
-  const { push } = useApp();
+  const { push, settings } = useApp();
+  const studio = isStudio(settings);
   return (
     <div className="screen fade-in">
       <div className="plan-sticky">
         <div className="titlebar"><h1 className="h1">Plan</h1><button className="icon-btn" onClick={() => push('PlanWeek')} aria-label="This week"><CalendarRange size={19} /></button></div>
-        <SubTabs value={view} onChange={setView} options={[['day', 'Day'], ['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
+        <SubTabs value={view} onChange={setView} options={studio ? [['day', 'Day'], ['tasks', 'Tasks'], ['goals', 'Goals']] : [['day', 'Day'], ['tasks', 'Tasks'], ['goals', 'Goals'], ['people', 'People']]} />
       </div>
-      {view === 'day' ? <PlanBlock /> : view === 'tasks' ? <TasksView /> : view === 'goals' ? <GoalsView /> : <PeopleView />}
+      {view === 'day' ? <PlanBlock /> : view === 'tasks' ? (studio ? <ThingsHome /> : <TasksView />) : view === 'goals' || studio ? <GoalsView /> : <PeopleView />}
     </div>
   );
 }
@@ -296,7 +299,7 @@ export function Projects() {
 const TYPES = [{ value: 'weekly', label: 'Week' }, { value: 'monthly', label: 'Month' }, { value: 'yearly', label: 'Year' }, { value: 'casual', label: 'Someday' }];
 const TYPE_TITLE = { weekly: 'This week', monthly: 'This month', yearly: 'This year', casual: 'Someday' };
 
-function GoalsView() {
+export function GoalsView() {
   const { push } = useApp();
   const data = useLiveQuery(async () => ({ goals: await db.goals.toArray(), tasks: await db.tasks.toArray(), checkins: await db.goalCheckins.toArray() }), []);
   const [stats, setStats] = useState(false);

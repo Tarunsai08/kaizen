@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Sun, Repeat2, HeartPulse, GraduationCap, CalendarCheck, Check } from 'lucide-react';
+import { Sun, Repeat2, HeartPulse, GraduationCap, CalendarCheck, Check, Sprout, LayoutGrid } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { db, seed, DEFAULT_SETTINGS, setKV } from './db';
@@ -15,6 +15,11 @@ import { hcSync } from './lib/health';
 import { updateWidgets } from './lib/widgets';
 import { rescheduleSoon, registerActions, ensurePermission } from './lib/notify';
 import { applyPlColor } from './lib/plcolor';
+import { isStudio } from './studio/mode';
+import { Spaces, SpaceScreen } from './studio/Spaces';
+import { FocusHub, FocusRun, ZenMode, Forest } from './studio/Focus';
+import { StudyHome, SubjectJourney, ChapterJourney, LessonDone } from './studio/journey/Journey';
+import { TaskList } from './studio/Tasks';
 import { today, nowHM, setDayStart, setEarlyStart } from './lib/date';
 
 import Today from './screens/Today';
@@ -60,6 +65,7 @@ const SCREENS = {
   MoneyScreen, Roadmap, Lesson, StudyImport, SubjectSettings, ReviewDeck, StudyStats,
   LearningForm, LearningDetail, ExperimentDetail, Nugget, ShareChooser,
   PlanWeek, FixedSchedule, PlannerSetup, MoreMenu, WrapUp, PlannerInsights: InsightsTab,
+  Space: SpaceScreen, FocusRun, ZenMode, Forest, SubjectJourney, ChapterJourney, LessonDone, TaskList,
 };
 const TABS = [
   { key: 'today', label: 'Today', icon: Sun, C: Today },
@@ -67,6 +73,15 @@ const TABS = [
   { key: 'study', label: 'Study', icon: GraduationCap, C: Study },
   { key: 'habits', label: 'Habits', icon: Repeat2, C: Habits },
   { key: 'health', label: 'Health', icon: HeartPulse, C: Health },
+];
+
+// Studio rethinks the navigation: Habits and Health move into Spaces, Focus gets its own tab.
+const STUDIO_TABS = [
+  { key: 'today', label: 'Today', icon: Sun, C: Today },
+  { key: 'plan', label: 'Plan', icon: CalendarCheck, C: Plan },
+  { key: 'focus', label: 'Focus', icon: Sprout, C: FocusHub },
+  { key: 'study', label: 'Study', icon: GraduationCap, C: Study },
+  { key: 'spaces', label: 'Spaces', icon: LayoutGrid, C: Spaces },
 ];
 
 export default function App() {
@@ -111,9 +126,9 @@ export default function App() {
   useEffect(() => { setSoundEnabled(settings.sound); }, [settings.sound]);
   // theme
   useEffect(() => {
-    document.documentElement.dataset.theme = settings.theme; document.documentElement.dataset.ui = settings.uiStyle === 'zen' ? 'zen' : 'classic'; applyPlColor(settings.plannerColor, settings.theme);
+    document.documentElement.dataset.theme = settings.theme; document.documentElement.dataset.ui = isStudio(settings) ? 'studio' : 'classic'; applyPlColor(settings.plannerColor, settings.theme);
     const meta = document.querySelector('meta[name=theme-color]');
-    const zen = settings.uiStyle === 'zen';
+    const zen = isStudio(settings);
     if (meta) meta.content = settings.theme === 'light' ? (zen ? '#f6f5f1' : '#f4f4f1') : (zen ? '#0e0e10' : '#000000');
     if (isNative) {
       StatusBar.setStyle({ style: settings.theme === 'light' ? Style.Light : Style.Dark }).catch(() => {});
@@ -130,7 +145,13 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToastMsg(null), 2200);
   }, []);
   const celebrate = useCallback(() => setConfetti((c) => c + 1), []);
-  const goTab = useCallback((k) => { tap(); setTab(k); setStack([]); }, []);
+  const tabsRef = useRef(TABS);
+  const goTab = useCallback((k) => {
+    tap();
+    // a tab that doesn't exist in this style (e.g. Habits in Studio) opens as a page instead
+    if (!tabsRef.current.some((t) => t.key === k)) { setStack([{ name: 'Space', props: { k }, key: Math.random() }]); return; }
+    setTab(k); setStack([]);
+  }, []);
 
   // swipe left/right to move between tabs (not inside sheets, inputs or sideways-scrolling rows)
   const swipe = useRef(null);
@@ -145,8 +166,9 @@ export default function App() {
     if (!s || !s.ok || stateRef.current.stack.length) return;
     const p = e.changedTouches[0], dx = p.clientX - s.x, dy = p.clientY - s.y;
     if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
-    const i = TABS.findIndex((x) => x.key === stateRef.current.tab), j = i + (dx < 0 ? 1 : -1);
-    if (j >= 0 && j < TABS.length) goTab(TABS[j].key);
+    const T = tabsRef.current;
+    const i = T.findIndex((x) => x.key === stateRef.current.tab), j = i + (dx < 0 ? 1 : -1);
+    if (j >= 0 && j < T.length) goTab(T[j].key);
   };
 
   // Android back button
@@ -289,7 +311,10 @@ export default function App() {
   }
 
   const top = stack[stack.length - 1];
-  const TabC = TABS.find((t) => t.key === tab).C;
+  const studio = isStudio(settings);
+  const tabs = studio ? STUDIO_TABS : TABS;
+  tabsRef.current = tabs;
+  const TabC = (tabs.find((t) => t.key === tab) || tabs[0]).C;
   const Pushed = top ? SCREENS[top.name] : null;
 
   return (
@@ -309,7 +334,7 @@ export default function App() {
         })}
         {!Pushed && (
           <nav className="nav">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button key={t.key} className={tab === t.key ? 'on' : ''} onClick={() => goTab(t.key)}>
                 <span className="pill"><t.icon size={21} strokeWidth={tab === t.key ? 2.3 : 1.9} /></span>
                 {t.label}

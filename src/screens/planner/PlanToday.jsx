@@ -13,6 +13,7 @@ import { success, tap } from '../../lib/native';
 import { Sheet, Toggle } from '../../ui/kit';
 import { blockSegments } from '../../scheduler';
 import { dayData, plannerSettings, startSession, finishSession, skipSession, startNow, doInstead, editSession, setLowEnergy, typeColor, hm12, dur, eventToTask } from '../../planner/service';
+import { DayNav } from './DayNav';
 import './planner.css';
 
 const KIND_COLOR = { WORK: 'var(--pl)', EASY_WIN: 'var(--good)', PLAN_SUBTASKS: 'var(--goal)', BUFFER: 'var(--faint)', BREAK: 'var(--faint)' };
@@ -212,7 +213,9 @@ export default function PlanBlock() {
   const { ctx, meta } = data.pl;
   const nowD = new Date();
   const nowMin = nowD.getHours() * 60 + nowD.getMinutes();
-  const days = Array.from({ length: 45 }, (_, i) => addDays(t, i - 7));
+  // the strip follows the chosen date, so jumping a month ahead still shows the days around it
+  const stripBase = date < addDays(t, -7) || date > addDays(t, 30) ? addDays(date, -10) : addDays(t, -7);
+  const days = Array.from({ length: 45 }, (_, i) => addDays(stripBase, i));
   const chip = [ctx.mood ? `Mood ${ctx.mood}` : null, ctx.sleepH ? `Slept ${Math.round(ctx.sleepH * 10) / 10}h` : null].filter(Boolean).join(' · ');
   const planned = data.pl.sessions.filter((s) => s.kind !== 'BREAK' && s.state !== 'SKIPPED');
   const doneN = planned.filter((s) => s.state === 'DONE' || s.state === 'PARTIAL').length;
@@ -271,11 +274,8 @@ export default function PlanBlock() {
       )}
       {tl.banners.length > 0 && <div className="small dim mt-8"><Calendar size={13} style={{ verticalAlign: -2 }} /> {tl.banners.map((b) => b.title).join(' · ')}</div>}
 
-      <div className="eyebrow mt-24">{isToday ? 'Today' : 'Day'}</div>
-      <div className="row between mb-8 mt-8">
-        <div className="h3">{isToday ? DAYS_SHORT[p0.getDay()] + ', ' + p0.getDate() + ' ' + MONTHS[p0.getMonth()] : DAYS_SHORT[p0.getDay()] + ', ' + p0.getDate() + ' ' + MONTHS[p0.getMonth()]}</div>
-        {!isToday && <button className="pl-chip" onClick={() => { tap(); setDate(t); }}>Back to today</button>}
-      </div>
+      <div className="mt-24" />
+      <DayNav date={date} today={t} onChange={setDate} />
       <div className="datestrip" ref={stripRef}>
         {days.map((d) => {
           const p = parse(d);

@@ -19,11 +19,12 @@ import { useEnergy } from './Health';
 import { personStatus, Avatar } from './People';
 import { YesterdayPrompt } from './TodayLayouts';
 import { LAYOUTS } from './today/index';
-import TodayZen from './today/Zen';
+import StudioToday from '../studio/Today';
+import { isStudio } from '../studio/mode';
 
 export default function Today() {
   const { settings } = useApp();
-  if (settings.uiStyle === 'zen') return <TodayZen />;
+  if (isStudio(settings)) return <StudioToday />;
   const L = LAYOUTS[settings.todayLayout];
   return L ? <L key={settings.todayLayout} /> : <TodayClassic />;
 }

@@ -1,3 +1,5 @@
+import { journeyOn } from '../studio/mode';
+import { StudyHome } from '../studio/journey/Journey';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -55,6 +57,10 @@ export function useStudyToday() {
 
 /* ------------------------------------------------ Study tab */
 export function Study() {
+  const { settings } = useApp();
+  return journeyOn(settings) ? <StudyHome /> : <StudyRoadmaps />;
+}
+function StudyRoadmaps() {
   const [view, setView] = useSub('study', 'roadmaps');
   const { push } = useApp();
   const st = useStudyToday();
@@ -140,7 +146,7 @@ function Roadmaps({ st, onAdd }) {
 }
 
 /* ------------------------------------------------ add / import / export */
-function AddSubjectSheet({ open, onClose }) {
+export function AddSubjectSheet({ open, onClose }) {
   const { push, toast } = useApp();
   const exportAll = async () => {
     const subs = await db.subjects.orderBy('order').toArray();

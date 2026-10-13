@@ -1,3 +1,4 @@
+import { journeyOn } from '../studio/mode';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -629,7 +630,7 @@ function ResourcesSheet({ open, onClose, subject, node }) {
 
 /* =================================================================== Lesson */
 export function Lesson({ sid, id }) {
-  const { push, pop, toast } = useApp();
+  const { push, pop, toast, settings } = useApp();
   const { subject, prog, done, loading } = useSubject(sid);
   const card = useLiveQuery(() => db.cards.get(id), [id]);
   const [note, setNoteS] = useState(null);
@@ -656,8 +657,10 @@ export function Lesson({ sid, id }) {
     setAskTime(false);
     await completeLesson(sid, node, { mins });
     success();
-    toast('Lesson complete');
     pop();
+    // learning journey: celebrate, then roll on to the next lesson
+    if (journeyOn(settings)) setTimeout(() => push('LessonDone', { sid, id, mins }), 0);
+    else toast('Lesson complete');
   };
   return (
     <div className="screen no-nav page-enter" style={{ paddingBottom: 110 }}>
