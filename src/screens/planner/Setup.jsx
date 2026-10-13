@@ -104,7 +104,7 @@ export function PlannerSetup() {
       {steps[step]}
       <div className="row gap-8 mt-24">
         {step > 0 && <button className="btn" onClick={() => setStep(step - 1)}>Back</button>}
-        <button className="btn primary grow" onClick={() => (step < steps.length - 1 ? setStep(step + 1) : finish())}>{step < steps.length - 1 ? 'Next' : 'Finish'}</button>
+        <button className="btn primary pl grow" onClick={() => (step < steps.length - 1 ? setStep(step + 1) : finish())}>{step < steps.length - 1 ? 'Next' : 'Finish'}</button>
       </div>
     </div>
   );

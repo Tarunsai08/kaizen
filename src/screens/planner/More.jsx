@@ -33,7 +33,7 @@ export function MoreMenu() {
   const m = useModules();
   const go = (name, props) => () => push(name, props);
   const rows = [
-    { l: 'Insights', s: 'Planned vs done, best hours, sleep and mood', i: Sparkles, c: 'var(--accent)', a: go('PlannerInsights') },
+    { l: 'Insights', s: 'Planned vs done, best hours, sleep and mood', i: Sparkles, c: 'var(--pl)', a: go('PlannerInsights') },
     { l: 'Week plan', s: 'Load per day, deadlines, at-risk work', i: CalendarClock, c: 'var(--goal)', a: go('PlanWeek') },
     m.on('money') && { l: 'Money', s: 'Spending and subscriptions', i: Wallet, c: 'var(--money)', a: go('MoneyScreen') },
     m.on('boredom') && { l: 'I’m bored', s: 'Pick something on purpose', i: Wind, c: 'var(--bored)', a: go('Boredom') },
@@ -42,7 +42,7 @@ export function MoreMenu() {
     m.on('people') && { l: 'People', s: 'Keep in touch', i: Users, c: 'var(--habit)', a: () => goTab('plan') },
     m.on('boredom') && { l: 'Hobbies and websites', s: 'Your boredom kit', i: Palette, c: 'var(--fit)', a: go('Hobbies') },
     m.on('money') && { l: 'Subscriptions', s: 'What renews and when', i: Repeat, c: 'var(--task)', a: go('Subscriptions') },
-    { l: 'Fixed schedule', s: 'Classes, meals, gym, sleep', i: CalendarClock, c: 'var(--accent)', a: go('FixedSchedule') },
+    { l: 'Fixed schedule', s: 'Classes, meals, gym, sleep', i: CalendarClock, c: 'var(--pl)', a: go('FixedSchedule') },
     { l: 'Focus timer', s: 'A distraction-free session', i: Timer, c: 'var(--bored)', a: go('Focus', {}) },
     { l: 'You', s: 'Level, companion, year in pixels', i: Globe, c: 'var(--goal)', a: go('You') },
     { l: 'Settings', s: 'Planner, modules, reminders, backup', i: Cog, c: 'var(--text-2)', a: go('Settings') },

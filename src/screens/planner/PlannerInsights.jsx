@@ -38,9 +38,9 @@ export function InsightsTab() {
   const byHour = {};
   d.sessions.filter((s) => work(s) && (s.state === 'DONE' || s.state === 'PARTIAL')).forEach((s) => { const h = Math.floor(s.start / 60); byHour[h] = (byHour[h] || 0) + 1; });
   const learned = Object.entries(d.stats.energy?.hours || {}).filter(([, v]) => v.n >= 2).map(([h, v]) => ({ label: hm12(Number(h) * 60).replace(':00', ''), value: Math.round(v.s * 100), n: v.n })).sort((a, b) => b.value - a.value).slice(0, 4);
-  const hourItems = (learned.length >= 2 ? learned : Object.entries(byHour).map(([h, n]) => ({ label: hm12(h * 60).replace(':00', ''), value: n })).sort((a, b) => b.value - a.value).slice(0, 4)).map((x) => ({ ...x, color: 'var(--accent)' }));
+  const hourItems = (learned.length >= 2 ? learned : Object.entries(byHour).map(([h, n]) => ({ label: hm12(h * 60).replace(':00', ''), value: n })).sort((a, b) => b.value - a.value).slice(0, 4)).map((x) => ({ ...x, color: 'var(--pl)' }));
 
-  const corr = Object.entries(d.stats.correction || {}).map(([k, v]) => ({ label: `${CATEGORIES.find((c) => c.value === k)?.label || k} ×${v.toFixed(2)}`, value: v, color: v > 1.1 ? 'var(--goal)' : v < 0.9 ? 'var(--good)' : 'var(--accent)' }));
+  const corr = Object.entries(d.stats.correction || {}).map(([k, v]) => ({ label: `${CATEGORIES.find((c) => c.value === k)?.label || k} ×${v.toFixed(2)}`, value: v, color: v > 1.1 ? 'var(--goal)' : v < 0.9 ? 'var(--good)' : 'var(--pl)' }));
 
   const skipped = d.sessions.filter((s) => work(s) && s.state === 'SKIPPED' && !s.swapped);
   const slipCount = {};

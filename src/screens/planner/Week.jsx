@@ -46,7 +46,7 @@ export function PlanWeek() {
             <button key={date} className={`wk-day ${open === date ? 'on' : ''}`} onClick={() => setOpen(date)} aria-label={date}>
               <span className="l">{DAYS_SHORT[dt.getDay()][0]}</span>
               <span className="n">{dt.getDate()}</span>
-              <span className="bar"><i style={{ height: `${Math.min(100, (st.total / cap) * 100)}%`, background: st.total > cap * 1.05 ? 'var(--goal)' : 'var(--accent)' }} /></span>
+              <span className="bar"><i style={{ height: `${Math.min(100, (st.total / cap) * 100)}%`, background: st.total > cap * 1.05 ? 'var(--goal)' : 'var(--pl)' }} /></span>
               <span className="dot" style={{ opacity: st.due.length ? 1 : 0 }} />
             </button>
           );

@@ -10,7 +10,7 @@ import { blockSegments } from '../../scheduler';
 import { dayData, plannerSettings, startSession, finishSession, skipSession, startNow, doInstead, editSession, setLowEnergy, typeColor, hm12, dur, eventToTask } from '../../planner/service';
 import './planner.css';
 
-const KIND_COLOR = { WORK: 'var(--accent)', EASY_WIN: 'var(--good)', PLAN_SUBTASKS: 'var(--goal)', BUFFER: 'var(--faint)', BREAK: 'var(--faint)' };
+const KIND_COLOR = { WORK: 'var(--pl)', EASY_WIN: 'var(--good)', PLAN_SUBTASKS: 'var(--goal)', BUFFER: 'var(--faint)', BREAK: 'var(--faint)' };
 
 /** Merge everything that happens on a date into one ordered list. */
 export function buildTimeline(data, date, ps) {
@@ -35,7 +35,7 @@ export function buildTimeline(data, date, ps) {
   (data.sessions || []).forEach((s) => {
     if (s.state === 'SKIPPED') return;
     const task = (data.tasks || []).find((x) => x.id === s.taskId);
-    items.push({ key: 's' + s.id, kind: s.kind === 'BREAK' ? 'break' : 'session', start: s.start, end: s.end, title: s.title, sub: s.reason, color: KIND_COLOR[s.kind] || 'var(--accent)', session: s, task });
+    items.push({ key: 's' + s.id, kind: s.kind === 'BREAK' ? 'break' : 'session', start: s.start, end: s.end, title: s.title, sub: s.reason, color: KIND_COLOR[s.kind] || 'var(--pl)', session: s, task });
   });
   return { items: items.sort((a, b) => a.start - b.start || a.end - b.end), banners };
 }
@@ -57,7 +57,7 @@ export function NowCard({ items, onOpen, onPick }) {
         <div className="eyebrow">{busy ? 'Now' : 'Free'}</div>
         <div className="h2 mt-4">{busy ? busy.title : 'Nothing planned right now'}</div>
         <div className="why">{busy ? `Until ${hm12(busy.end)}.` : 'Pick something if you feel like it.'}</div>
-        {!busy && <div className="pl-acts"><button className="btn primary" onClick={() => onPick(null)}>Pick a task</button></div>}
+        {!busy && <div className="pl-acts"><button className="btn primary pl" onClick={() => onPick(null)}>Pick a task</button></div>}
       </div>
     );
   }
@@ -74,8 +74,8 @@ export function NowCard({ items, onOpen, onPick }) {
       <div className="why">{s.reason}</div>
       <div className="pl-acts">
         {started
-          ? <button className="btn primary" onClick={async () => { await finishSession(s.id, 'DONE'); success(); toast('Done. Nice work'); }}><Check size={16} /> Done</button>
-          : <button className="btn primary" onClick={async () => { await startSession(s.id); tap(); }}><Play size={16} /> Start</button>}
+          ? <button className="btn primary pl" onClick={async () => { await finishSession(s.id, 'DONE'); success(); toast('Done. Nice work'); }}><Check size={16} /> Done</button>
+          : <button className="btn primary pl" onClick={async () => { await startSession(s.id); tap(); }}><Play size={16} /> Start</button>}
         <button className="btn quiet" onClick={() => onOpen(it)}>Not now</button>
       </div>
     </div>
@@ -121,7 +121,7 @@ export function SessionSheet({ item, onClose }) {
         <div className="small mt-8">{s.reason}</div>
         {planned && <>
           <div className="pl-acts">
-            <button className="btn primary" onClick={async () => { await startNow(s.id); onClose(); success(); }}><Play size={16} /> Start now</button>
+            <button className="btn primary pl" onClick={async () => { await startNow(s.id); onClose(); success(); }}><Play size={16} /> Start now</button>
             <button className="btn" onClick={async () => { await finishSession(s.id, 'DONE'); success(); onClose(); }}><Check size={16} /> Done</button>
           </div>
           <div className="list mt-12">
@@ -140,7 +140,7 @@ export function SessionSheet({ item, onClose }) {
         <div className="small muted">{hm12(item.start)}–{hm12(item.end)} · calendar event</div>
         <div className="pl-acts">
           <button className="btn" onClick={async () => { await db.calEvents.update(item.event.id, { treatAs: 'IGNORE' }); onClose(); toast('Ignored in the plan'); }}>Ignore</button>
-          <button className="btn primary" onClick={async () => { await eventToTask(item.event); onClose(); toast('Turned into a task'); }}>Make a task</button>
+          <button className="btn primary pl" onClick={async () => { await eventToTask(item.event); onClose(); toast('Turned into a task'); }}>Make a task</button>
         </div>
       </> : null}
     </Sheet>
@@ -195,7 +195,7 @@ export default function PlanBlock() {
     <div>
       {!ps.setupDone && (
         <button className="card card-press row gap-14" style={{ width: '100%', textAlign: 'left' }} onClick={() => push('PlannerSetup')}>
-          <div className="swatch" style={{ background: 'color-mix(in srgb, var(--accent) 16%, transparent)' }}><Sparkles size={20} color="var(--accent)" /></div>
+          <div className="swatch" style={{ background: 'color-mix(in srgb, var(--pl) 16%, transparent)' }}><Sparkles size={20} color="var(--pl)" /></div>
           <div className="grow"><div className="h3">Set up your planner</div><div className="small muted">Wake time, peak hours, fixed commitments</div></div>
           <ChevronRight size={18} className="muted" />
         </button>

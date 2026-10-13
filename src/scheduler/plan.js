@@ -52,7 +52,7 @@ export function buildPlan(input) {
   const nowTs = input.now ?? Date.now();
   const np = parts(nowTs);
   const today = input.today || np.date;
-  const nowMin = np.date === today ? np.min : 0;
+  const nowMin = np.date === today ? np.min : np.date === addDays(today, 1) ? np.min + 1440 : 0; // after midnight but still 'yesterday' for the user
   const locked = (input.locked || []).filter((s) => s.date >= today);
   const lowDay = !!(ctx.lowEnergy || (ctx.mood != null && ctx.mood <= 2) || (ctx.sleepH != null && ctx.sleepH < 6));
   const goodDay = !lowDay && ctx.mood != null && ctx.mood >= 4 && (ctx.sleepH == null || ctx.sleepH >= 7);
@@ -137,7 +137,7 @@ export function buildPlan(input) {
       const w = subs.map((s) => estimateHours({ difficulty: s.difficulty ?? t.difficulty, whole: false, category: 'OTHER' }, {}, {}).hours);
       const ws = w.reduce((a, b) => a + b, 0);
       units = subs.map((s, i) => ({ subId: s.id, title: s.title, difficulty: s.difficulty ?? t.difficulty ?? 3, minutes: (noHrs ? (t.estHours * 60 * w[i]) / ws : est({ difficulty: s.difficulty ?? t.difficulty, hours: s.estHours, whole: false }).hours * 60) }));
-    } else {
+    } else if (!(t.subtasks || []).length) {
       units = [{ subId: null, title: t.title, difficulty: t.difficulty ?? 3, minutes: est({ difficulty: t.difficulty, hours: t.estHours, whole: true }).hours * 60 }];
     }
     let skip = spent + covered;

@@ -89,7 +89,7 @@ function BlockSheet({ block, onClose }) {
         <textarea className="textarea" style={{ minHeight: 50 }} placeholder="Notes (optional)" value={x.notes || ''} onChange={(e) => set({ notes: e.target.value })} />
         <div className="row gap-8">
           {x.id && <button className="btn danger" onClick={() => setDel(true)}><Trash2 size={16} /></button>}
-          <button className="btn primary grow" onClick={save}>Save</button>
+          <button className="btn primary pl grow" onClick={save}>Save</button>
         </div>
       </div>
       <Confirm open={del} onClose={() => setDel(false)} title="Delete block?" onConfirm={async () => { await db.fixedBlocks.delete(x.id); setDel(false); onClose(); }} />

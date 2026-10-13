@@ -135,3 +135,56 @@ test('sessions never overlap each other, fixed blocks or the awake window; a wee
   w.forEach((s) => (perDay[s.date] = (perDay[s.date] || 0) + s.end - s.start));
   assert.ok(Object.values(perDay).every((m) => m <= 6 * 60 + 1));
 });
+
+test('edge: overdue task still gets planned (today, flagged), not dropped', () => {
+  const p = buildPlan(base({ tasks: [task({ deadline: at(9, 0, 12), difficulty: 2 })] }));
+  assert.ok(work(p).length > 0);
+});
+
+test('edge: late sleeper (wake 11:00, bed 03:00 next day) plans inside the awake window only', () => {
+  const p = buildPlan(base({ now: at(11), settings: { wakeMin: 660, bedMin: 180 }, tasks: [task({ estHours: 4, deadline: at(23, 59, 16) })] }));
+  assert.ok(work(p).length > 0);
+  assert.ok(work(p).every((s) => s.start >= 660 || s.date !== TODAY));
+});
+
+test('edge: planning at 02:00 after midnight does not crash and never places sessions in the past', () => {
+  const now = at(2, 0);
+  const p = buildPlan(base({ now, tasks: [task()] }));
+  const nowMin = 2 * 60;
+  assert.ok(work(p).filter((s) => s.date === TODAY).every((s) => s.start >= nowMin));
+});
+
+test('edge: finished subtasks and zero-size tasks produce no sessions', () => {
+  const p = buildPlan(base({ tasks: [task({ subtasks: [{ id: 'a', title: 'x', done: true }] }), task({ id: 2, estHours: 0 })] }));
+  assert.ok(work(p).every((s) => s.taskId !== 1));
+});
+
+test('edge: 120 tasks plan quickly and sessions never overlap', () => {
+  const tasks = Array.from({ length: 120 }, (_, i) => task({ id: i + 1, title: 'T' + i, deadline: at(23, 59, 14 + (i % 12)), difficulty: 1 + (i % 5) }));
+  const t0 = Date.now();
+  const p = buildPlan(base({ tasks }));
+  assert.ok(Date.now() - t0 < 1500);
+  const s = p.sessions;
+  for (let i = 0; i < s.length; i++) for (let j = i + 1; j < s.length; j++) assert.ok(!overlaps(s[i], s[j]));
+});
+
+test('edge: deferToday removes a task from today but keeps it planned later', () => {
+  const p = buildPlan(base({ tasks: [task({ deferToday: true, difficulty: 2, estHours: 1, deadline: at(23, 59, 20) })] }));
+  assert.equal(work(p).filter((s) => s.date === TODAY).length, 0);
+  assert.ok(work(p).length > 0);
+});
+
+test('edge: deferToday also applies to a recurring daily task', () => {
+  const p = buildPlan(base({ tasks: [task({ deferToday: true, recurring: { minutes: 45 }, deadline: undefined })] }));
+  assert.equal(p.sessions.filter((s) => s.date === TODAY && s.taskId === 1).length, 0);
+});
+
+test('edge: missing/odd inputs (no category, NaN estimate, no settings) do not throw', () => {
+  assert.doesNotThrow(() => buildPlan(base({ tasks: [{ id: 9, title: 'x', estHours: NaN }], settings: {} })));
+});
+
+test('edge: 02:00 while the app-day is still yesterday never schedules into the already-ended day', () => {
+  const p = buildPlan({ ...base({ tasks: [task({ difficulty: 2, estHours: 1, deadline: at(23, 59, 20) })] }), today: '2026-10-13', now: at(2, 0, 14) });
+  assert.equal(work(p).filter((s) => s.date === '2026-10-13').length, 0);
+  assert.ok(work(p).length > 0);
+});
