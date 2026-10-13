@@ -179,6 +179,19 @@ export function Timeline({ items, date, onOpen, showNow = true }) {
   );
 }
 
+/** All-day calendar events folded into one row; tap to see them. */
+function AllDay({ events }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`ad ${open ? 'open' : ''}`}>
+      <button className="ad-h" onClick={() => setOpen(!open)}>
+        <Calendar size={15} /><span className="grow">{events.length === 1 ? events[0].title : `${events.length} all-day events`}</span>
+        {events.length > 1 && <ChevronRight size={15} className="chev" />}
+      </button>
+      {open && events.length > 1 && <div className="ad-list">{events.map((e) => <div key={e.id} className="ellipsis">{e.title}</div>)}</div>}
+    </div>
+  );
+}
 const minToHM = (m) => { m = ((m % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 const FIXED_ICON = { CLASS: 'i:GraduationCap', MEAL: 'i:Utensils', GYM: 'i:Dumbbell', WORK: 'i:Briefcase', COMMUTE: 'i:Car' };
 
@@ -272,7 +285,7 @@ export default function PlanBlock() {
           )}
         </>
       )}
-      {tl.banners.length > 0 && <div className="small dim mt-8"><Calendar size={13} style={{ verticalAlign: -2 }} /> {tl.banners.map((b) => b.title).join(' · ')}</div>}
+      {tl.banners.length > 0 && <AllDay events={tl.banners} />}
 
       <div className="mt-24" />
       <DayNav date={date} today={t} onChange={setDate} />

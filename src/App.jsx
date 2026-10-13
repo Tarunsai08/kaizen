@@ -31,6 +31,7 @@ import { Plan, TaskForm, GoalForm, GoalDetail, GoalReview, Projects } from './sc
 import { Boredom, Sites, Hobbies, BoredStats, BoredApps } from './screens/Boredom';
 import { NightReview, Morning, JournalHistory, JournalDay, Insights, WeeklyReview, MoodStats } from './screens/Journal';
 import { Settings, CategoriesEdit } from './screens/Me';
+import { SettingsPage } from './screens/settings/Settings';
 import { Health } from './screens/Health';
 import { MoodCheckin, Breathe, ReframeList, Reframe, Wheel } from './screens/Mind';
 import { Focus, FocusStats } from './screens/Focus';
@@ -65,7 +66,7 @@ const SCREENS = {
   MoneyScreen, Roadmap, Lesson, StudyImport, SubjectSettings, ReviewDeck, StudyStats,
   LearningForm, LearningDetail, ExperimentDetail, Nugget, ShareChooser,
   PlanWeek, FixedSchedule, PlannerSetup, MoreMenu, WrapUp, PlannerInsights: InsightsTab,
-  Space: SpaceScreen, FocusRun, ZenMode, Forest, SubjectJourney, ChapterJourney, ConceptPath, LessonDone, TaskList,
+  SettingsPage, Space: SpaceScreen, FocusRun, ZenMode, Forest, SubjectJourney, ChapterJourney, ConceptPath, LessonDone, TaskList,
 };
 const TABS = [
   { key: 'today', label: 'Today', icon: Sun, C: Today },

@@ -157,11 +157,77 @@
 .sr .fg { fill: none; stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }
 .sr .g1 { stop-color: color-mix(in srgb, var(--accent) 55%, #fff); }
 .sr .g2 { stop-color: var(--accent); }
-.sr .tk { stroke: var(--line-2); stroke-width: 1.1; stroke-linecap: round; }
-.sr .tk.on { stroke: color-mix(in srgb, var(--accent) 60%, transparent); }
 .sr .knob { fill: #fff; stroke: var(--accent); stroke-width: 2.4; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3)); }
 .sr .best { fill: var(--goal); }
 .sr .in { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .sr .in b { font-size: 31px; font-weight: 820; letter-spacing: -0.05em; line-height: 1; }
 .sr .in small { font-size: 9.5px; font-weight: 750; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px; }
 .sr .in em { font-style: normal; font-size: 9.5px; font-weight: 700; color: var(--goal); margin-top: 2px; }
+
+/* ---------- section cards (consistent rhythm: 14px gaps, 16px padding) ---------- */
+.st-card { display: block; width: 100%; margin-top: 14px; padding: 14px 16px 16px; border-radius: 22px; text-align: left; background: var(--surface); box-shadow: var(--z-card); }
+.st-ch { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+.st-ch b { font-size: 16.5px; font-weight: 780; letter-spacing: -0.02em; }
+.st-ch span { flex: 1; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.st-ch button { font-size: 13px; font-weight: 700; color: var(--accent); }
+.st-todohead { margin-top: 14px; }
+.st-score { margin-top: 18px; }
+
+/* habits inside the card: evenly spread when few, scroll when many */
+.st-habits { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 4px; margin: 0; padding: 0; overflow: visible; }
+.st-habits.scroll { display: flex; overflow-x: auto; margin: 0 -16px; padding: 0 12px; gap: 2px; }
+.st-habits.scroll .st-hb { width: 78px; }
+.st-hb { width: auto; min-width: 0; }
+.st-hb .c { width: 58px; height: 58px; }
+.st-hb .ic { width: 42px; height: 42px; }
+.st-hb .c > svg circle { stroke-width: 4.5; }
+.st-hb .n { margin-top: 7px; font-size: 12.5px; gap: 1px; }
+.st-hb .n span { max-width: 100%; font-weight: 700; }
+.st-hb.add .c { border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-2); color: var(--muted); }
+.st-hb.add .n span { color: var(--muted); font-weight: 600; }
+.st-empty-card { display: flex; align-items: center; gap: 12px; }
+.st-empty-card .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--habit); background: color-mix(in srgb, var(--habit) 15%, transparent); }
+.st-empty-card b { display: block; font-size: 15px; } .st-empty-card small { display: block; color: var(--muted); font-size: 12.5px; }
+
+/* goals */
+.st-goal { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 0; text-align: left; }
+.st-goal + .st-goal { border-top: 1px solid var(--line); }
+.st-goal .tx { min-width: 0; display: flex; flex-direction: column; }
+.st-goal b { font-size: 14.5px; font-weight: 650; }
+.st-goal small { font-size: 12px; color: var(--muted); }
+.st-goal .pb { width: 64px; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; flex-shrink: 0; }
+.st-goal .pb i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+
+/* study */
+.st-sj { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 0; text-align: left; }
+.st-sj + .st-sj { border-top: 1px solid var(--line); }
+.st-sj .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--c); box-shadow: 0 6px 14px -8px var(--c); flex-shrink: 0; }
+.st-sj .tx { min-width: 0; display: flex; flex-direction: column; }
+.st-sj small { font-size: 11.5px; font-weight: 700; color: var(--c); }
+.st-sj b { font-size: 14.5px; font-weight: 650; }
+.st-sj .pb { display: block; height: 4px; margin-top: 5px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.st-sj .pb i { display: block; height: 100%; background: var(--c); }
+.st-sj .mins { font-size: 14px; font-weight: 750; flex-shrink: 0; }
+.st-sj .mins small { color: var(--muted); font-weight: 600; font-size: 11px; }
+.st-rev { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 650; color: var(--task); background: color-mix(in srgb, var(--task) 11%, transparent); }
+.st-rev svg:last-child { margin-left: auto; }
+
+/* people */
+.st-people { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 0 12px; }
+.st-pp { width: 74px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px 0; }
+.st-pp .av { position: relative; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; font-size: 19px; font-weight: 800; color: #fff; background: var(--c); margin-bottom: 4px; }
+.st-pp.due .av { box-shadow: 0 0 0 2.5px var(--surface), 0 0 0 4.5px var(--accent); }
+.st-pp .av i { position: absolute; right: 0; top: 0; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+.st-pp b { max-width: 100%; font-size: 12.5px; font-weight: 700; }
+.st-pp small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.st-pp.due small { color: var(--accent); }
+.st-hint { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+
+/* at a glance */
+.st-glance { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.st-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-height: 112px; padding: 14px; border-radius: 20px; text-align: left; background: var(--surface); box-shadow: var(--z-card); transition: transform 0.3s var(--spring); }
+.st-tile:active { transform: scale(0.96); }
+.st-tile .ic { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 8px; color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); }
+.st-tile small { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.st-tile b { font-size: 15px; font-weight: 760; letter-spacing: -0.015em; line-height: 1.25; }
+.st-tile em { font-style: normal; font-size: 12px; color: var(--muted); max-width: 100%; margin-top: auto; padding-top: 4px; }

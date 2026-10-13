@@ -91,3 +91,9 @@
 .mc-d.on { background: var(--pl); color: var(--pl-ink); box-shadow: none; }
 .mc-d i { position: absolute; bottom: 5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 2px; background: currentColor; opacity: 0.6; }
 .mc-d:active { transform: scale(0.9); }
+.ad { margin-top: 10px; border-radius: 14px; background: color-mix(in srgb, #60a5fa 10%, var(--surface)); }
+.ad-h { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; text-align: left; font-size: 13.5px; font-weight: 650; color: #60a5fa; }
+.ad-h span { color: var(--text); }
+.ad-h .chev { transition: transform 0.25s; color: var(--muted); }
+.ad.open .ad-h .chev { transform: rotate(90deg); }
+.ad-list { padding: 0 12px 10px 35px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--text-2); }

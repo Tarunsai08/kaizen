@@ -3,7 +3,7 @@
 // (Things-style list) with its planned time as a badge — the full timeline lives in Plan → Day.
 import React, { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Star, Moon, Sunrise, Flag, ChevronRight, Plus, GraduationCap, Check, Dumbbell, Phone, Wallet, FlaskConical, Flame, Sparkles, Play, Repeat2, Footprints, CheckSquare, Smile, Coffee } from 'lucide-react';
+import { Star, Moon, Sunrise, Flag, ChevronRight, Plus, GraduationCap, Check, Dumbbell, Phone, Wallet, FlaskConical, Flame, Sparkles, Play, Repeat2, Brain, Wind, Zap, Footprints, CheckSquare, Smile, Coffee } from 'lucide-react';
 import { HIcon } from '../ui/icons';
 import { db } from '../db';
 import { useApp } from '../ctx';
@@ -15,6 +15,7 @@ import { buildTimeline } from '../screens/planner/PlanToday';
 import { useToday } from '../screens/today/useToday';
 import { useFlash, Kai } from '../screens/today/shared';
 import { QuickEntry } from './QuickEntry';
+import { personStatus } from '../screens/People';
 import './today.css';
 
 const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -35,6 +36,11 @@ export default function StudioToday() {
   useEffect(() => { const i = setInterval(() => tick((x) => x + 1), 30000); return () => clearInterval(i); }, []);
   const t = today();
   const plan = useLiveQuery(() => dayData(t, settings), [t, settings.wakeTarget]);
+  const people = useLiveQuery(async () => {
+    const [ps, inter] = await Promise.all([db.people.toArray(), db.interactions.toArray()]);
+    const list = ps.map((p) => ({ p, s: personStatus(p, inter) })).sort((a, b) => (b.s.due - a.s.due) || ((b.s.since ?? 999) - (a.s.since ?? 999)));
+    return { list: list.slice(0, 6), due: list.filter((x) => x.s.due).length };
+  }, []);
   if (!D) return <div className="screen" />;
 
   const n = new Date();
@@ -90,13 +96,6 @@ export default function StudioToday() {
   const after = focusS ? open.filter((s) => s.start > focusS.start)[0] : null;
   const startFocus = async (s) => { tap('medium'); await startSession(s.id); push('FocusRun', { mins: Math.max(5, s.end - s.start), kind: settings.treeKind || 'oak', taskId: s.taskId, label: s.title }); };
 
-  const extras = [
-    D.workout && !D.workout.done && { k: 'w', i: Dumbbell, c: 'var(--fit)', l: 'Workout', s: D.workout.summary, go: D.workout.go },
-    ...D.goals.filter((g) => g.checkinDue).map((g) => ({ k: g.key, i: Flag, c: g.color, l: g.title, s: 'Goal check-in', go: g.go })),
-    ...D.people.map((p) => ({ k: p.key, i: Phone, c: p.color, l: `Reach out to ${p.name}`, s: p.sub, go: p.go })),
-    ...D.experiments.filter((e) => !e.log).map((e) => ({ k: e.key, i: FlaskConical, c: 'var(--habit)', l: e.title, s: `Experiment · day ${e.day} of ${e.days}`, go: e.go })),
-    D.untagged > 0 && settings.modules?.money !== false && { k: 'm', i: Wallet, c: 'var(--money)', l: `${D.untagged} expense${D.untagged > 1 ? 's' : ''} to tag`, s: `${D.spentLabel} spent today`, go: go.money },
-  ].filter(Boolean);
   const ringVal = (r) => (r.key === 'habits' ? `${D.day.habitsDone}/${D.day.habitsDue}` : r.key === 'tasks' ? `${D.day.tasksDone}/${D.day.tasksTotal}` : r.value == null ? '—' : `${Math.round(r.value * 100)}%`);
 
   const todo = (x) => (
@@ -183,21 +182,25 @@ export default function StudioToday() {
         </section>
       )}
 
-      {D.habits.length > 0 && (
-        <>
-          <div className="st-h">Habits<button onClick={go.habits}>All</button></div>
-          <div className="st-habits">
+      {/* habits: one card, rings spread evenly */}
+      {D.habits.length > 0 ? (
+        <section className="st-card">
+          <div className="st-ch"><b>Habits</b><span>{D.habits.filter((h) => h.done).length}/{D.habits.length} done</span><button onClick={go.habits}>All</button></div>
+          <div className={`st-habits ${D.habits.length > 4 ? 'scroll' : ''}`} style={{ '--n': Math.min(4, Math.max(3, D.habits.length)) }}>
             {D.habits.map((h) => (
               <div key={h.key} className={`st-hb ${h.done ? 'done' : ''} ${flash[h.key] ? 'flash-' + flash[h.key] : ''}`} style={{ '--c': h.color }}>
                 <button className="c" onClick={() => doHabit(h)} aria-label={h.name}>
                   <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" className="bg" /><circle cx="24" cy="24" r="21" className="fg" pathLength="100" strokeDasharray={`${h.prog * 100} 100`} /></svg>
-                  <span className="ic">{h.done ? <Check size={18} strokeWidth={3} /> : <HIcon icon={h.icon} size={17} color="currentColor" />}</span>
+                  <span className="ic">{h.done ? <Check size={20} strokeWidth={3} /> : <HIcon icon={h.icon} size={20} color="currentColor" />}</span>
                 </button>
-                <button className="n" onClick={() => openHabit(h)}>{h.name}<small>{h.target > 1 ? `${h.amt}/${h.target}` : h.done ? 'done' : 'today'}</small></button>
+                <button className="n" onClick={() => openHabit(h)}><span className="ellipsis">{h.name}</span><small>{h.target > 1 ? `${h.amt} of ${h.target}${h.h.unit ? ' ' + h.h.unit : ''}` : h.done ? 'done' : 'today'}</small></button>
               </div>
             ))}
+            {D.habits.length < 3 && <div className="st-hb add"><button className="c" onClick={go.addHabit} aria-label="New habit"><span className="ic"><Plus size={20} /></span></button><span className="n"><span>New habit</span></span></div>}
           </div>
-        </>
+        </section>
+      ) : (
+        <button className="st-card st-empty-card" onClick={go.addHabit}><span className="ic"><Plus size={18} /></span><span className="grow"><b>Add your first habit</b><small>Something small to repeat every day</small></span></button>
       )}
 
       {/* every to-do, once */}
@@ -220,20 +223,61 @@ export default function StudioToday() {
       {showDone && <div className="st-list faded">{done.map(todo)}</div>}
       </>}
 
-      {extras.length > 0 && (
-        <>
-          <div className="st-h">Also today</div>
-          <div className="st-also">
-            {extras.map((e) => (
-              <button key={e.k} className="st-al" style={{ '--c': e.c }} onClick={e.go}>
-                <span className="ic"><e.i size={15} /></span>
-                <span className="grow tx"><b className="ellipsis">{e.l}</b><small className="ellipsis">{e.s}</small></span>
-                <ChevronRight size={15} />
-              </button>
-            ))}
-          </div>
-        </>
+      {/* goals */}
+      {D.goals.length > 0 && (
+        <section className="st-card">
+          <div className="st-ch"><b>Goals</b><span>{D.goals.length} active</span><button onClick={go.goals}>All</button></div>
+          {D.goals.slice(0, 3).map((g) => (
+            <button key={g.key} className="st-goal" style={{ '--c': g.color }} onClick={g.go}>
+              <span className="grow tx"><b className="ellipsis">{g.title}</b><small>{g.kind} · {g.label}{g.checkinDue ? ' · check in' : ''}</small></span>
+              <span className="pb"><i style={{ width: `${Math.round(g.value * 100)}%` }} /></span>
+            </button>
+          ))}
+        </section>
       )}
+
+      {/* study */}
+      {settings.modules?.study !== false && D.study && D.study.subjects.length > 0 && (
+        <section className="st-card">
+          <div className="st-ch"><b>Keep learning</b><span>{D.study.streak ? `${D.study.streak}-day streak` : 'today'}</span><button onClick={D.study.all}>Study</button></div>
+          {D.study.subjects.map((sj) => (
+            <button key={sj.key} className="st-sj" style={{ '--c': sj.color }} onClick={sj.go}>
+              <span className="ic"><HIcon icon={sj.icon} size={18} color="#fff" /></span>
+              <span className="grow tx"><small>{sj.title}</small><b className="ellipsis">{sj.next}</b><span className="pb"><i style={{ width: `${Math.round(sj.prog * 100)}%` }} /></span></span>
+              <span className="mins num">{sj.mins}<small>/{sj.goal}m</small></span>
+            </button>
+          ))}
+          {D.study.due > 0 && <button className="st-rev" onClick={D.study.review}><Brain size={16} /> {D.study.due} card{D.study.due > 1 ? 's' : ''} to revise <ChevronRight size={15} /></button>}
+        </section>
+      )}
+
+      {/* people */}
+      {settings.modules?.people !== false && people && (
+        <section className="st-card">
+          <div className="st-ch"><b>People</b><span>{people.due ? `${people.due} to reach out to` : 'all in touch'}</span><button onClick={() => push('Space', { k: 'people' })}>All</button></div>
+          {people.list.length ? (
+            <div className="st-people">
+              {people.list.map(({ p, s: ps }) => (
+                <button key={p.id} className={`st-pp ${ps.due ? 'due' : ''}`} style={{ '--c': p.color || '#a78bfa' }} onClick={() => push('PersonDetail', { id: p.id })}>
+                  <span className="av">{(p.name || '?').slice(0, 1).toUpperCase()}{ps.due && <i />}</span>
+                  <b className="ellipsis">{p.name}</b>
+                  <small>{ps.since == null ? 'say hi' : ps.since === 0 ? 'today' : `${ps.since}d ago`}</small>
+                </button>
+              ))}
+            </div>
+          ) : <button className="st-hint" onClick={() => push('Space', { k: 'people' })}><Phone size={15} /> Add the people you want to stay close to</button>}
+        </section>
+      )}
+
+      {/* at a glance */}
+      <div className="st-glance">
+        {D.workout && <Tile c="var(--fit)" I={Dumbbell} k="Move" t={D.workout.done ? 'Workout done' : 'Today’s session'} s={D.workout.summary} on={D.workout.go} />}
+        {D.energy && <Tile c="var(--goal)" I={Zap} k="Energy now" t={D.energy.label} s={D.energy.until ? `until ${D.energy.until}` : D.energy.tip} on={() => push('Space', { k: 'health' })} />}
+        {settings.modules?.money !== false && <Tile c="var(--money)" I={Wallet} k="Spent today" t={D.spentLabel} s={D.untagged ? `${D.untagged} to tag` : 'all tagged'} on={go.money} />}
+        {settings.modules?.boredom !== false && <Tile c="var(--bored)" I={Wind} k="Bored?" t="Pick something" s="on purpose" on={go.bored} />}
+        {D.experiments.map((e) => <Tile key={e.key} c="var(--habit)" I={FlaskConical} k="Experiment" t={e.title} s={e.over ? 'review the result' : `day ${e.day} of ${e.days}${e.log ? '' : ' · check in'}`} on={e.go} />)}
+        <Tile c="var(--accent)" I={Sparkles} k="Insights" t="Your patterns" s="sleep, mood, money" on={go.insights} />
+      </div>
       <div style={{ height: 30 }} />
       <button className="st-plus" onClick={() => setQe(n.getHours() >= 17 ? 'evening' : 'today')} aria-label="New to-do"><Plus size={28} strokeWidth={2.4} /></button>
       <QuickEntry open={!!qe} when={qe || 'today'} onClose={() => setQe(null)} />
@@ -260,7 +304,6 @@ function ScoreRing({ score, best }) {
         <defs>
           <linearGradient id="srg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" className="g1" /><stop offset="1" className="g2" /></linearGradient>
         </defs>
-        {Array.from({ length: 40 }, (_, i) => { const a = (i / 40) * 2 * Math.PI; return <line key={i} className={i / 40 * 100 <= shown ? 'tk on' : 'tk'} x1={50 + 32 * Math.cos(a)} y1={50 + 32 * Math.sin(a)} x2={50 + (i % 5 ? 34 : 35.5) * Math.cos(a)} y2={50 + (i % 5 ? 34 : 35.5) * Math.sin(a)} />; })}
         <circle cx="50" cy="50" r={R} className="bg" />
         <circle cx="50" cy="50" r={R} className="fg" stroke="url(#srg)" pathLength="100" strokeDasharray={`${Math.max(0.6, shown)} 100`} transform="rotate(-90 50 50)" />
         {bm && <circle cx={bm[0]} cy={bm[1]} r="2.2" className="best" />}
@@ -268,6 +311,16 @@ function ScoreRing({ score, best }) {
       </svg>
       <div className="in"><b className="num">{shown}</b><small>day score</small>{best > score && <em>best {best}</em>}</div>
     </div>
+  );
+}
+function Tile({ c, I, k, t, s, on }) {
+  return (
+    <button className="st-tile" style={{ '--c': c }} onClick={on}>
+      <span className="ic"><I size={16} /></span>
+      <small>{k}</small>
+      <b className="clamp2">{t}</b>
+      {s && <em className="ellipsis">{s}</em>}
+    </button>
   );
 }
 export { db };
