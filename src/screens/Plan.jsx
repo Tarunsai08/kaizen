@@ -164,9 +164,11 @@ export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
   useEffect(() => { (async () => setX(id ? await db.tasks.get(id) : { title: '', description: '', categoryId: null, projectId: projectId || null, goalId: goalId || null, due: due === undefined ? today() : due, dueTime: dueTime || '', duration: duration || 30, priority: 'none', recurrence: 'none', subtasks: [], reminder: null, done: false }))(); }, [id]);
   if (!x) return <div className="screen no-nav" />;
   const set = (p) => setX((v) => ({ ...v, ...p }));
+  const addSub = () => { if (!sub.trim()) return; set({ subtasks: [...(x.subtasks || []), { id: uid(), title: sub.trim(), done: false }] }); setSub(''); };
   const save = async () => {
     if (!x.title.trim()) return toast('Add a title');
-    const row = { ...x, title: x.title.trim() };
+    // a step still in the box counts too
+    const row = { ...x, title: x.title.trim(), subtasks: sub.trim() ? [...(x.subtasks || []), { id: uid(), title: sub.trim(), done: false }] : x.subtasks };
     if (id) await db.tasks.put(row); else await db.tasks.add({ ...row, createdAt: Date.now() });
     success(); toast('Saved'); pop();
   };
@@ -205,7 +207,7 @@ export function TaskForm({ id, due, projectId, goalId, dueTime, duration }) {
         <Field label="Subtasks">
           <div className="list">
             <SubList subs={x.subtasks || []} set={set} />
-            <div className="list-item"><Plus size={16} className="muted" /><input className="grow" style={{ background: 'none', border: 0 }} placeholder="Add a step" value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && sub.trim()) { set({ subtasks: [...(x.subtasks || []), { id: uid(), title: sub.trim(), done: false }] }); setSub(''); } }} /></div>
+            <div className="list-item"><input className="grow" style={{ background: 'none', border: 0 }} placeholder="Add a step" enterKeyHint="done" value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); addSub(); } }} /><button className="icon-btn sm" disabled={!sub.trim()} onClick={addSub} aria-label="Add step"><Plus size={18} /></button></div>
           </div>
         </Field>
         <div className="grid-2">
