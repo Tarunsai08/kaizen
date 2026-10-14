@@ -57,7 +57,7 @@ export function toSchedTasks(rows, logs, t) {
     if (rec) { const k = x.title + '|' + x.recurrence; if (seen.has(k)) continue; seen.set(k, 1); }
     const subs = (x.subtasks || []).map((s) => ({ id: s.id, title: s.title, done: !!s.done, difficulty: s.difficulty, estHours: s.estHours }));
     const o = {
-      id: x.id, title: x.title, category: x.pcat || 'OTHER', difficulty: x.difficulty ?? 1,
+      id: x.id, title: x.title, category: x.pcat || 'OTHER', difficulty: x.difficulty ?? 1, simple: !planner,
       estHours: x.estHours ?? (planner ? undefined : (x.duration || 30) / 60),
       deadline: x.due ? tsOf(x.due, x.dueTime || '23:59') : null, subtasks: subs, spentMin: spent[x.id] || 0, planNudged: !!x.planNudged,
     };

@@ -132,6 +132,9 @@ export function buildPlan(input) {
     let units = [];
     if (t.recurring) {
       units = [];
+    } else if (t.simple) {
+      // a plain to-do is one block of its own length; its next open step rides along as the small line
+      units = [{ subId: subs[0]?.id ?? null, title: subs[0]?.title || t.title, difficulty: t.difficulty ?? 2, minutes: Math.max(15, (t.estHours || 0.5) * 60) }];
     } else if (subs.length) {
       const noHrs = t.estHours > 0 && subs.every((s) => !(s.estHours > 0));
       const w = subs.map((s) => estimateHours({ difficulty: s.difficulty ?? t.difficulty, whole: false, category: 'OTHER' }, {}, {}).hours);
@@ -148,7 +151,7 @@ export function buildPlan(input) {
       for (let i = 0; i < n; i++) chunks.push({ ...u, minutes: Math.max(15, up5(u.minutes / n)) });
     }
     const total = chunks.reduce((a, c) => a + c.minutes, 0);
-    if (!t.recurring && !(t.subtasks || []).length && !t.planNudged && total >= 45) chunks.unshift({ subId: null, title: t.title, difficulty: 1, minutes: 15, kind: 'PLAN_SUBTASKS' });
+    if (!t.recurring && !t.simple && !(t.subtasks || []).length && !t.planNudged && total >= 45) chunks.unshift({ subId: null, title: t.title, difficulty: 1, minutes: 15, kind: 'PLAN_SUBTASKS' });
     let deadline = t.deadline != null ? (t.deadline < nowTs ? endOfToday : t.deadline) : null;
     let target = null;
     if (deadline != null) {
@@ -266,8 +269,9 @@ export function buildPlan(input) {
           if (safe) continue;
         }
         const minLen = Math.min(ch.minutes, 25);
-        const sessionsLeft = live.length > 1 && (t.n[date] || 0) >= 3;
-        if (sessionsLeft) continue;
+        // a task gets at most two blocks a day, more only when it is due that day or at risk
+        const dueThatDay = t.deadline != null && ymd(new Date(t.deadline)) === date;
+        if ((t.n[date] || 0) >= (dueThatDay || t.atRisk ? 6 : 2)) continue;
         if (!t.atRisk && !t.boost && t.deadline != null && ch.kind !== 'PLAN_SUBTASKS') {
           const dLeft = Math.max(1, diffDays(ymd(new Date(t.target ?? t.deadline)), date) + 1);
           const quota = Math.max(S.sessionMin, (t.remaining / dLeft) * 1.5);
@@ -275,7 +279,7 @@ export function buildPlan(input) {
         }
         const opts = fits(date, t, minLen);
         if (!opts.length) continue;
-        chosen = { t, ch, slot: pick(opts, ch.difficulty) };
+        chosen = { t, ch, slot: t.simple ? [...opts].sort((a, b) => a.start - b.start)[0] : pick(opts, ch.difficulty) };
         break;
       }
       if (!chosen) break;
@@ -321,6 +325,10 @@ export function buildPlan(input) {
     const next = sessions.filter((s) => s.date > today && s.kind === 'WORK').sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)[0];
     if (next) offers.push({ type: 'pull', taskId: next.taskId, title: next.taskTitle, text: 'Pull one task forward?' });
   }
+  // number the blocks of a task within a day ("1 of 3") so repeats read as parts, not duplicates
+  const groups = {};
+  sessions.filter((x) => x.kind !== 'BREAK' && x.taskId != null).forEach((x) => (groups[x.date + '|' + x.taskId] ||= []).push(x));
+  Object.values(groups).forEach((g) => { if (g.length > 1) g.sort((a, b) => a.start - b.start).forEach((x, i) => { x.part = `${i + 1} of ${g.length}`; }); });
   sessions.forEach((x) => { delete x._e; delete x._ch; });
   return { sessions: [...sessions, ...breaks].sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start), atRisk, unplaced, notes, offers, lowDay, goodDay, capacity: cap };
 }

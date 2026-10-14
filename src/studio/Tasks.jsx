@@ -8,7 +8,6 @@ import { today, addDays, parse, fmtHM, DAYS_SHORT, MONTHS } from '../lib/date';
 import { completeTask } from '../lib/logic';
 import { success, tap } from '../lib/native';
 import { sfxComplete } from '../lib/sound';
-import { QuickEntry } from './QuickEntry';
 import './tasks.css';
 
 const LISTS = [
@@ -34,7 +33,7 @@ export function listOf(x, t) {
 /** Plan → Tasks in Studio: the list of lists. */
 export function ThingsHome() {
   const { push } = useApp();
-  const [qe, setQe] = useState(false);
+  const setQe = () => push('TaskForm', {});
   const t = today();
   const d = useLiveQuery(async () => {
     const [tasks, projects] = await Promise.all([db.tasks.toArray(), db.projects.toArray()]);
@@ -72,7 +71,6 @@ export function ThingsHome() {
         {!d.proj.length && <button className="tk-li dim" onClick={() => push('Projects')}><Plus size={20} /><span className="grow">New project</span></button>}
       </div>
       <button className="st-plus" onClick={() => setQe(true)} aria-label="New to-do"><Plus size={28} strokeWidth={2.4} /></button>
-      <QuickEntry open={qe} when="inbox" onClose={() => setQe(false)} />
     </div>
   );
 }
@@ -86,7 +84,7 @@ function Pie({ value, color, size = 20 }) {
 /** One Things list (or a project) as its own page. */
 export function TaskList({ list, projectId }) {
   const { push, pop } = useApp();
-  const [qe, setQe] = useState(false);
+  const setQe = () => push('TaskForm', { projectId, due: list === 'upcoming' ? addDays(today(), 1) : list === 'someday' || list === 'inbox' ? null : undefined });
   const [just, setJust] = useState({});
   const t = today();
   const d = useLiveQuery(async () => {
@@ -158,7 +156,6 @@ export function TaskList({ list, projectId }) {
       <div className="tk-body">{body}</div>
       {!d.rows.length && <div className="tk-empty">{list === 'logbook' ? 'Finished to-dos land here.' : list === 'inbox' ? 'Inbox zero. Nicely done.' : 'Nothing here.'}</div>}
       {list !== 'logbook' && <button className="st-plus" style={{ bottom: 'calc(var(--safe-bottom) + 24px)' }} onClick={() => setQe(true)} aria-label="New to-do"><Plus size={28} strokeWidth={2.4} /></button>}
-      <QuickEntry open={qe} projectId={projectId} when={list === 'upcoming' ? 'tomorrow' : list === 'someday' ? 'someday' : list === 'today' ? 'today' : 'inbox'} onClose={() => setQe(false)} />
     </div>
   );
 }

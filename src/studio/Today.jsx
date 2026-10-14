@@ -14,7 +14,6 @@ import { dayData, plannerSettings, hm12, startSession, finishSession } from '../
 import { buildTimeline } from '../screens/planner/PlanToday';
 import { useToday } from '../screens/today/useToday';
 import { useFlash, Kai } from '../screens/today/shared';
-import { QuickEntry } from './QuickEntry';
 import { personStatus } from '../screens/People';
 import './today.css';
 
@@ -27,7 +26,7 @@ const t12 = (m) => hm12(m).replace(':00', '').replace(' ', '').toLowerCase();
 export default function StudioToday() {
   const { D, logHabit, toggleTask, openTask, openHabit, go } = useToday();
   const { settings, push } = useApp();
-  const [qe, setQe] = useState(null);
+  const setQe = () => push('TaskForm', {});
   const [showDone, setShowDone] = useState(false);
   const [flash, doFlash] = useFlash(1100);
   const [, tick] = useState(0);
@@ -57,7 +56,7 @@ export default function StudioToday() {
     if (shown.has(taskId)) return;
     const task = plan.tasks.find((x) => x.id === taskId);
     if (!task || task.done) return;
-    rows.push({ key: 's' + ss[0].id, id: taskId, task, title: ss[0].title, done: false, meta: [task.title !== ss[0].title ? task.title : '', ss.length > 1 ? `${ss.length} sessions today` : ''].filter(Boolean), sess: ss, time: ss[0].start, sessionRow: true });
+    rows.push({ key: 's' + ss[0].id, id: taskId, task, title: task.title, done: false, meta: [task.title !== ss[0].title ? ss[0].title : '', ss.length > 1 ? `${ss.length} sessions today` : ''].filter(Boolean), sess: ss, time: ss[0].start, sessionRow: true });
   });
   const PR = { high: 0, medium: 1, low: 2 };
   const deadline = (x) => `${x.task.due || '9999-99-99'} ${x.task.dueTime || '99:99'}`;
@@ -160,8 +159,9 @@ export default function StudioToday() {
           <div className="k">{busy && !nowS ? `In ${busy.title} until ${t12(busy.end)}` : nowS ? (running ? 'Focusing now' : 'Now') : nextS ? `Next · ${t12(nextS.start)}` : 'Up next'}</div>
           {focusS ? (
             <>
-              <b className="clamp2">{focusS.title}</b>
-              <small>{t12(focusS.start)}–{t12(focusS.end)}{focusS.taskTitle && focusS.taskTitle !== focusS.title ? ` · ${focusS.taskTitle}` : ''}</small>
+              <b className="clamp2">{focusS.taskTitle || focusS.title}</b>
+              {focusS.taskTitle && focusS.taskTitle !== focusS.title && <span className="step">{focusS.title}</span>}
+              <small>{t12(focusS.start)}–{t12(focusS.end)}{focusS.part ? ` · part ${focusS.part}` : ''}</small>
               <div className="acts">
                 <button className="go" onClick={() => startFocus(focusS)}><Play size={16} fill="currentColor" /> {running ? 'Resume focus' : 'Start focus'}</button>
                 <button className="ok" onClick={async () => { success(); sfxComplete(); await finishSession(focusS.id, 'DONE'); }} aria-label="Done"><Check size={18} strokeWidth={2.6} /></button>
@@ -279,7 +279,6 @@ export default function StudioToday() {
       </div>
       <div style={{ height: 30 }} />
       <button className="st-plus" onClick={() => setQe(n.getHours() >= 17 ? 'evening' : 'today')} aria-label="New to-do"><Plus size={28} strokeWidth={2.4} /></button>
-      <QuickEntry open={!!qe} when={qe || 'today'} onClose={() => setQe(null)} />
     </div>
   );
 }

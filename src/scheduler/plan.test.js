@@ -188,3 +188,21 @@ test('edge: 02:00 while the app-day is still yesterday never schedules into the 
   assert.equal(work(p).filter((s) => s.date === '2026-10-13').length, 0);
   assert.ok(work(p).length > 0);
 });
+
+test('a plain to-do in a project is one block, with its next step as the small line', () => {
+  const p = buildPlan(base({ tasks: [task({ simple: true, difficulty: 1, estHours: 0.5, deadline: at(23, 59), subtasks: [{ id: 's1', title: 'Step one' }, { id: 's2', title: 'Step two' }] })] }));
+  const w = work(p);
+  assert.equal(w.length, 1);
+  assert.equal(w[0].taskTitle, 'DBMS Assignment');
+  assert.equal(w[0].title, 'Step one');
+  assert.equal(w[0].end - w[0].start, 30);
+});
+
+test('a big task alone is not repeated all day: at most two blocks a day unless due that day', () => {
+  const p = buildPlan(base({ tasks: [task({ difficulty: 4, deadline: at(23, 59, 20) })] }));
+  const perDay = {};
+  work(p).forEach((s) => { perDay[s.date] = (perDay[s.date] || 0) + 1; });
+  assert.ok(Object.values(perDay).every((n) => n <= 2), JSON.stringify(perDay));
+  const today = work(p).filter((s) => s.date === TODAY);
+  if (today.length > 1) assert.deepEqual(today.map((s) => s.part), today.map((_, i) => `${i + 1} of ${today.length}`));
+});

@@ -41,7 +41,7 @@ export function buildTimeline(data, date, ps) {
   (data.sessions || []).forEach((s) => {
     if (s.state === 'SKIPPED') return;
     const task = (data.tasks || []).find((x) => x.id === s.taskId);
-    items.push({ key: 's' + s.id, kind: s.kind === 'BREAK' ? 'break' : 'session', start: s.start, end: s.end, title: s.title, sub: s.reason, color: KIND_COLOR[s.kind] || 'var(--pl)', session: s, task });
+    items.push({ key: 's' + s.id, kind: s.kind === 'BREAK' ? 'break' : 'session', start: s.start, end: s.end, title: s.kind === 'BREAK' ? s.title : s.taskTitle || s.title, sub: s.kind === 'BREAK' ? s.reason : [s.taskTitle && s.title !== s.taskTitle ? s.title : null, s.part ? `Part ${s.part}` : null].filter(Boolean).join(' · ') || s.reason, color: KIND_COLOR[s.kind] || 'var(--pl)', session: s, task });
   });
   return { items: items.sort((a, b) => a.start - b.start || a.end - b.end), banners };
 }
@@ -76,7 +76,7 @@ export function NowCard({ items, onOpen, onPick }) {
         <span className="tiny muted">{cur ? `${dur(Math.max(0, it.end - mins))} left` : `in ${dur(Math.max(0, it.start - mins))}`}</span>
       </div>
       <button className="h2 mt-4" style={{ textAlign: 'left', width: '100%' }} onClick={() => onOpen(it)}>{it.title}</button>
-      {s.title !== s.taskTitle && <div className="small muted">{s.taskTitle}</div>}
+      {s.taskTitle && s.title !== s.taskTitle && <div className="small muted">{s.title}</div>}
       <div className="why">{s.reason}</div>
       <div className="pl-acts">
         {started
