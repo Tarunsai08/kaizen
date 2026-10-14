@@ -43,7 +43,7 @@ export function usePlannerEngine(ready, settings) {
       db.plannedSessions.where('date').aboveOrEqual(t).filter((s) => s.state !== 'PLANNED' || s.pinned).toArray(), getKV('lowEnergy', ''), getKV('pull', null),
     ]);
     return {
-      tasks: JSON.stringify([tasks.filter((x) => !x.done && !x.skipped).map((x) => [x.id, x.due, x.dueTime, x.difficulty, x.estHours, x.pcat, x.recurrence, x.plan, x.duration, (x.subtasks || []).map((s) => [s.id, s.done, s.difficulty, s.estHours])]), tasks.filter((x) => x.done).length]),
+      tasks: JSON.stringify([tasks.filter((x) => !x.done && !x.skipped).map((x) => [x.id, x.title, x.due, x.dueTime, x.difficulty, x.estHours, x.pcat, x.recurrence, x.plan, x.duration, (x.subtasks || []).map((s) => [s.id, s.title, s.done, s.difficulty, s.estHours])]), tasks.filter((x) => x.done).length]),
       fixed: JSON.stringify(fixed),
       cal: JSON.stringify(cal.map((e) => [e.id, e.start, e.end, e.treatAs])),
       checkin: JSON.stringify([moods.map((m) => [m.id, m.mood, m.energy]), sleep && [sleep.wakeTs, sleep.bedTs], journal && journal.id, low, pull]),

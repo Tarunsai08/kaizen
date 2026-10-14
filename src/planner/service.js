@@ -83,11 +83,15 @@ async function doReplan(settings, reason) {
   const ps = plannerSettings(settings);
   const now = Date.now();
   const nowMin = minOf(now);
-  const [rows, logs, fixed, events, sessions, stats, ctx, swapped, calib, pull] = await Promise.all([
+  const [rows, logs, fixed, events, allSessions, stats, ctx, swapped, calib, pull] = await Promise.all([
     db.tasks.toArray(), db.workLogs.toArray(), db.fixedBlocks.toArray(), db.calEvents.toArray(), db.plannedSessions.where('date').aboveOrEqual(t).toArray(),
     getKV('plannerStats', DEFAULT_SETTINGS.plannerStats), dayContext(t, settings), getKV('swapped', {}), getKV('capCalib', null), getKV('pull', null),
   ]);
   // sessions whose time passed without an answer count as skipped (quietly, no learning)
+  // planned blocks of a task that is now done, skipped or deleted simply go away
+  const live = new Set(rows.filter((x) => !x.done && !x.skipped).map((x) => x.id));
+  const gone = allSessions.filter((s) => s.state === 'PLANNED' && s.taskId != null && !live.has(s.taskId));
+  const sessions = allSessions.filter((s) => !gone.includes(s));
   const stale = sessions.filter((s) => s.state === 'PLANNED' && !s.pinned && s.kind !== 'BREAK' && s.date === t && s.end + 15 <= nowMin);
   const before = sessions.filter((s) => s.state === 'PLANNED' && !s.pinned && !(s.date === t && s.start < nowMin));
   const locked = sessions.filter((s) => s.kind !== 'BREAK' && (s.pinned || s.state !== 'PLANNED' || (s.date === t && s.start < nowMin)));
@@ -103,7 +107,7 @@ async function doReplan(settings, reason) {
     nextFactor: 1,
   });
   await db.transaction('rw', db.plannedSessions, db.kv, async () => {
-    await db.plannedSessions.bulkDelete(before.map((s) => s.id));
+    await db.plannedSessions.bulkDelete([...before, ...gone].map((s) => s.id));
     for (const s of stale) await db.plannedSessions.update(s.id, { state: 'SKIPPED', auto: true });
     await db.plannedSessions.bulkAdd(out.sessions.map((s) => ({ ...s, state: 'PLANNED', pinned: false })));
   });
